@@ -1,0 +1,5 @@
+addPrivileges=http\://tizen.org/privilege/internet
+customPepperPath=false
+eclipse.preferences.version=1
+pepperVersion=pepper_42
+removePrivileges=

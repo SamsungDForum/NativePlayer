@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets" height="1080" id="https://github.com/SamsungDForum/NativePlayer" version="1.0.0" viewmodes="maximized" width="1920">
+    <access origin="*" subdomains="true"/>
+    <tizen:application id="0Nf3BPEsam.native2" package="0Nf3BPEsam" required_version="2.3"/>
+    <content src="index.html"/>
+    <tizen:content-security-policy>*</tizen:content-security-policy>
+    <description>Description of your widget</description>
+    <feature name="http://tizen.org/feature/screen.size.all"/>
+    <icon src="resources/NaClPlayer_logo.png"/>
+    <tizen:metadata key="http://samsung.com/tv/metadata/voice.support" value="false"/>
+    <tizen:metadata key="http://samsung.com/tv/metadata/multiscreen.support" value="true"/>
+    <tizen:metadata key="http://samsung.com/tv/metadata/multitasking.support" value="true"/>
+    <name>Native Player</name>
+    <tizen:privilege name="http://tizen.org/privilege/internet"/>
+    <tizen:profile name="tv"/>
+    <tizen:setting/>
+    <tizen:setting/>
+</widget>

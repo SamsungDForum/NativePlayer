@@ -1,0 +1,418 @@
+/*!
+ * style.css (https://github.com/SamsungDForum/NativePlayer)
+ * Copyright 2016, Samsung Electronics Co., Ltd
+ * Licensed under the MIT license
+ */
+
+html {
+  min-height: 100%;
+}
+
+body {
+  background: White;
+  background: linear-gradient(to bottom right, #4c4c4c 0%,  #212121 100%);
+  margin: 0;
+  min-height: 100%;
+  word-wrap: break-word;
+  text-align: center;
+}
+
+code {
+  font: 85% consolas;
+}
+
+h1 {
+  text-align: center;
+  line-height: 1em;
+  color: #ffffff;
+  height: 50px;
+  font-size: 99px;
+}
+
+h2 {
+  font-size: 135%;
+}
+
+p {
+  font-size: 120%;
+}
+
+button {
+  background-color: Transparent;
+  border-radius: 25px;
+  border: none;
+}
+
+button:hover {
+  background: #3cb0fd;
+}
+
+button[disabled] {
+  background-color: Transparent;
+}
+
+select {
+  color: white;
+  overflow: hidden;
+  background: #212121;
+  padding: 5px;
+  font-size: 16px;
+  line-height: 1;
+  border: 0;
+  border-radius: 0;
+  -webkit-appearance: none;
+}
+
+textarea {
+  font-size: 85%;
+  border-radius: 20px;
+  padding: 3px;
+}
+
+#main_menu {
+  height: 800px;
+  display: block;
+}
+
+#clip_menu {
+  text-align: left;
+  min-height: 600px;
+  display: block;
+}
+
+#main_buttons {
+  position: absolute;
+  top: 300px;
+  width: 100%;
+}
+
+.center {
+  float: left;
+  background-color: white;
+  border: 15px;
+  box-shadow: 0 0 8px 7px white;
+  background-repeat: no-repeat;
+  background-size: 100%;
+}
+
+.other {
+  float: left;
+  background-repeat: no-repeat;
+  padding: 10px;
+  background-color: white;
+  background-size: 100%;
+  z-index: -1;
+}
+
+#left {
+  width: 15%;
+  padding-top: 200px;
+  margin-left: 15%;
+  height: 100px;
+  z-index:1;
+  padding-top: 160px;
+}
+
+#center {
+  width: 30%;
+  margin-left: 5%;
+  height: 200px;
+  padding-top: 310px;
+  z-index:10;
+}
+
+#right {
+  width: 15%;
+  margin-left: 5%;
+  height: 100px;
+  z-index:1;
+  padding-top: 160px;
+}
+
+@-webkit-keyframes left_center { 0% {
+  margin-left: -70%;
+  border: none;
+  box-shadow: none;
+  text: none;
+  height: 100px;
+  width: 15%;
+  z-index:10;}
+}
+
+@-webkit-keyframes center_right { 0% {
+  margin-left: -45%;
+  height: 200px;
+  width: 30%;
+  border: 15px;
+  box-shadow: 0 0 8px 7px white;}
+}
+
+@-webkit-keyframes right_left { 0% {
+  margin-left: 70%;}
+}
+
+@-webkit-keyframes right_center { 0% {
+  margin-left: 5%;
+  border: none;
+  box-shadow: none;
+  text: none;
+  z-index:10;
+  height: 100px;
+  width: 15%;}
+}
+
+@-webkit-keyframes center_left { 0% {
+  margin-left: 35%;
+  height: 200px;
+  width: 30%;
+  border: 15px;
+  box-shadow: 0 0 8px 7px white;}
+}
+
+@-webkit-keyframes left_right { 0% {
+  margin-left: -70%;
+  z-index: -1;}
+}
+
+#listener {
+  position: relative;
+  left: 15%;
+  height: 720px;
+  width: 1280px;
+  border: solid 2px black;
+  text-align: center;
+}
+
+#seek_area {
+  left: 5px;
+  top: 31%;
+  width: 1280px;
+  border-radius: 25px;
+}
+
+#total_bar {
+  text-align: left;
+  background-color: #e6e6e6;
+  width: 100%;
+  height: 17px;
+  border-radius: 25px;
+  border-style: outset;
+  border-color: grey;
+}
+
+#nacl_module {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+#played_bar {
+  background-color: red;
+  left: 0;
+  top: 0;
+  width: 0%;
+  height: 70%;
+  border-radius: 25px;
+  border-style: inset;
+  border-color: #8B0000;
+}
+
+#time_info {
+  text-align: left;
+  width: 100%;
+}
+
+#logs_area {
+  position: absolute;
+  float: right;
+  right: 0px;
+  top: 140px;
+  width: 300px;
+  display: none;
+}
+
+#support {
+  position: relative;
+  padding: 5px;
+  width: 200px;
+  top: 55px;
+  box-shadow: 10px 10px 5px grey;
+  border-radius: 15px;
+  background: linear-gradient(to bottom, #848484 0%, #282828 100%);
+}
+
+#nacl_message {
+  position: relative;
+  right: 10px;
+}
+
+#manual {
+  position: absolute;
+  font-size: 80%;
+  border-radius: 25px;
+}
+
+#controls {
+  position: absolute;
+  bottom: -110px;
+  width: 100%;
+}
+
+#select_reps {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  text-align: left;
+  z-index: 10;
+}
+
+:-webkit-full-screen #select_reps {
+  right: 300px;
+}
+
+:-webkit-full-screen #subtitles_reps {
+  right: 80%;
+}
+
+#listener:-webkit-full-screen {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: none;
+  top: 0;
+  left: 0;
+}
+
+:-webkit-full-screen #nacl_module {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+:-webkit-full-screen #controls {
+  bottom: 10px;
+  width: 100%;
+  -webkit-transition: opacity .4s;
+  z-index: 10;
+}
+
+:-webkit-full-screen #seek_area {
+  margin-left: 15%;
+}
+
+:-webkit-full-screen #subtitle {
+  bottom: 120px;
+  width: 100%;
+}
+
+.control {
+  border-radius: 28px;
+  font-family: Arial;
+  color: #ffffff;
+  font-size: 20px;
+  background: #202020;
+  padding: 10px 20px 10px 20px;
+  text-decoration: none;
+  height: 50px;
+}
+
+.operate_control {
+  border-radius: 28px;
+  font-family: Arial;
+  color: #ffffff;
+  font-size: 40px;
+  background: transparent;
+  padding: 5px 20px 10px 20px;
+  text-decoration: none;
+  height: 50px;
+}
+
+.seek_control {
+  border-radius: 28px;
+  font-family: Arial;
+  color: #ffffff;
+  font-size: 40px;
+  background: transparent;
+  padding: 5px 32px 10px 20px;
+  text-decoration: none;
+  height: 50px;
+  letter-spacing: -12px;
+}
+
+.selected {
+  background: #3cb0fd;
+}
+
+.inactive {
+  -webkit-transition: opacity .4s;
+  opacity: 0;
+}
+
+#next {
+  background-image: url('../resources/next.png');
+  width: 50px;
+  height: 50px;
+  margin-right: 130px;
+  border: none;
+  float: right;
+}
+
+#previous {
+  background-image: url('../resources/prev.png');
+  width: 50px;
+  height: 50px;
+  margin-left: 150px;
+  border: none;
+  float: left;
+}
+
+#audio_reps {
+  position: absolute;
+  display: none;
+  min-width: 200px;
+  right: -200px;
+  bottom: 0px;
+}
+
+#video_reps {
+  position: absolute;
+  display: none;
+  min-width: 300px;
+  right: 0px;
+  bottom: 0px;
+}
+
+#subtitles_reps {
+  position: absolute;
+  min-width: 300px;
+  right: 95%;
+  bottom: 4%;
+}
+
+#button_controls {
+  position: relative;
+  width: 100%;
+  bottom: 2%;
+  text-align: center;
+}
+
+#loading {
+  position: absolute;
+  top: 50%;
+  left: 37%;
+  font-size: 50px;
+  color: red;
+  display : block;
+  z-index: 10;
+}
+
+#subtitle {
+  position: absolute;
+  bottom: 5%;
+  width: 1280px;
+  text-align: center;
+  font-size: 30px;
+  color: white;
+  display : block;
+  z-index: 10;
+}

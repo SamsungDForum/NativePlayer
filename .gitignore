@@ -1,0 +1,7 @@
+# Ignore Eclipse and SDK project files and folders:
+.settings/
+.sign/
+CurrentBin/
+Debug/
+Release/
+*.wgt

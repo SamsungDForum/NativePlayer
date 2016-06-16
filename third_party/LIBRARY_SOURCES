@@ -1,0 +1,4 @@
+All libraries included in NativePlayer/third_party directory are precompiled
+from Webports sources. Webports can be obtained from the following repository:
+
+https://github.com/SamsungDForum/Webports

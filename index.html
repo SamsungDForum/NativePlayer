@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="-1">
+  <title id="page_title"></title>
+  <link rel="stylesheet" type="text/css" href="scripts/style.css">
+  <script type="text/javascript" src="scripts/index.js"></script>
+  <script type="text/javascript" src="scripts/communication.js"></script>
+</head>
+<body onload="init()">
+  <h1 id="demo_header">Native Player</h1>
+  <div id="main_menu">
+    <div id="clip_menu">
+      <div id="left" class="other"></div>
+      <div id="center" class="center" onclick="showPlayer()"></div>
+      <div id="right" class="other"></div>
+    </div>
+    <div id="main_buttons">
+      <button id="previous" onclick="changeClip(-1)"></button>
+      <button id="next" onclick="changeClip(1)"></button>
+    </div>
+  </div>
+</body>
+</html>
