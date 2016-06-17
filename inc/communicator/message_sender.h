@@ -111,6 +111,12 @@ class MessageSender {
   void SetTextTracks(const std::vector<Samsung::NaClPlayer::TextTrackInfo>&
                      textInfo);
 
+  /// Prepares and posts a message with the information that stream has ended
+  /// playback is no more possible from this moment.
+  ///
+  /// @see kStreamEnded Main key value in the prepared message.
+  void StreamEnded();
+
  private:
   /// Send a provided message by the communication channel.
   ///

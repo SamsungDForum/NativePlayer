@@ -45,7 +45,6 @@ using std::vector;
 
 const TimeTicks kNextSegmentTimeThreshold = 7.0f;    // in seconds
 const TimeTicks kAppendPacketsMinTimeBuffer = 4.0f;  // in seconds
-const uint32_t kPacketsToBuffer = 40;
 
 class StreamManager::Impl :
     public std::enable_shared_from_this<StreamManager::Impl> {
@@ -113,6 +112,7 @@ class StreamManager::Impl :
   Samsung::NaClPlayer::TimeTicks buffered_segments_time_;
   Samsung::NaClPlayer::TimeTicks buffered_packets_time_;
   Samsung::NaClPlayer::TimeTicks need_time_;
+  Samsung::NaClPlayer::TimeTicks new_position_;
   int32_t bytes_max_;
 };  // class StreamManager::Impl
 
@@ -134,6 +134,7 @@ StreamManager::Impl::Impl(pp::InstanceHandle instance, StreamType type)
       buffered_segments_time_(0.0f),
       buffered_packets_time_(0.0f),
       need_time_(0.0f),
+      new_position_(0.0f),
       bytes_max_(0) {}
 
 StreamManager::Impl::~Impl() {
@@ -172,6 +173,7 @@ void StreamManager::Impl::OnSeekData(TimeTicks new_position) {
     packets_.clear();
     seeking_ = true;
     need_time_ = new_position - data_provider_->AverageSegmentDuration();
+    new_position_ = new_position;
     if (need_time_ < 0.0) need_time_ = 0.0;
     packets_.clear();
   }
@@ -325,9 +327,8 @@ TimeTicks StreamManager::Impl::UpdateBuffer(TimeTicks playback_time) {
     }
 
     while (!packets_.empty() &&
-           (packets_.front()->GetPts() +
-            (kPacketsToBuffer * packets_.front()->GetDuration())) <
-               playback_time) {
+           (packets_.front()->GetPts() < std::min(playback_time, new_position_))
+               ) {
       LOG_DEBUG("dropping packets %f", packets_.front()->GetPts());
       packets_.pop_front();
     }

@@ -39,16 +39,6 @@ var clips = [
     poster: 'resources/bunny.jpg',
     describe: 'This is clip played directly from URL',
   },
-  // FIXME Added for test purposes.
-  // Need to find some sample video with internal subtitles and replace it.
-  {
-    title: 'X-Men mp4',
-    url: 'http://106.116.62.8/pnacl/MediaFramework/content/NaClPlayer_tests/xmen_sub.mp4',
-    type: ClipTypeEnum.kUrl,
-    poster: 'resources/xmen.jpg',
-    describe: 'This clip is held on internal server. Might not work.<br>' +
-              'This is clip played directly from URL and has many subtitles track',
-  },
 ];
 
 var TvKeyEnum = {
@@ -100,6 +90,7 @@ var MessageFromPlayerEnum = {
   kSubtitlesRepresentation : 105,
   kRepresentationChanged : 106,
   kSubtitles : 107,
+  kStreamEnded : 108,
 };
 
 var StreamTypeEnum = {
@@ -312,6 +303,10 @@ function handleNaclMessage(message_event) {
     option.text = message_event.data.id + '. ' + message_event.data.language;
     select.remove(message_event.data.id);
     select.add(option, select[message_event.data.id]);
+    break;
+  case MessageFromPlayerEnum.kStreamEnded:
+    ui_enabled = false;
+    document.getElementById('ended').style.display = 'block';
     break;
   }
 }

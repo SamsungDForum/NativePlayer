@@ -35,61 +35,61 @@ namespace Communication {
 /// type key identifier and description is provided.
 /// @see kKeyMessageToPlayer
 enum MessageToPlayer {
-        /// A request to close the player; no additional parameters.
+  /// A request to close the player; no additional parameters.
   kClosePlayer = 0,
 
-        /// A request to load content specified in additional fields and
-        /// prepare the player to play it.
-        /// @param (int)kKeyType A specification of what kind of content have
-        ///   to be loaded. The only values accepted for  this parameter are
-        ///   the ones defined by <code>ClipEnumType</code>
-        /// @param (string)kKeyUrl An URL to the content container. This points
-        ///   to different file types depending on values of
-        ///   <code>kKeyType</code>.
-        /// @param (string)kKeySubtitle [optional] A path to the
-        ///   file with external subtitles. If an application wants to play
-        ///   content with external subtitles this field must be filled.
-        /// @param (string)kKeyEncoding [optional] A subtitles encoding code.
-        ///   If this parameter is not specified then UTF-8 will be used .
-        /// @see Communication::ClipTypeEnum
+  /// A request to load content specified in additional fields and
+  /// prepare the player to play it.
+  /// @param (int)kKeyType A specification of what kind of content have
+  ///   to be loaded. The only values accepted for  this parameter are
+  ///   the ones defined by <code>ClipEnumType</code>
+  /// @param (string)kKeyUrl An URL to the content container. This points
+  ///   to different file types depending on values of
+  ///   <code>kKeyType</code>.
+  /// @param (string)kKeySubtitle [optional] A path to the
+  ///   file with external subtitles. If an application wants to play
+  ///   content with external subtitles this field must be filled.
+  /// @param (string)kKeyEncoding [optional] A subtitles encoding code.
+  ///   If this parameter is not specified then UTF-8 will be used .
+  /// @see Communication::ClipTypeEnum
   kLoadMedia = 1,
 
-        /// A request to start playing; no additional parameters.
+  /// A request to start playing; no additional parameters.
   kPlay = 2,
 
-        /// A request to pause playing; no additional parameters.
+  /// A request to pause playing; no additional parameters.
   kPause = 3,
 
-        /// A request to set a playback current position to a defined one.
-        /// @param (double)kKeyTime A new current playback position.
+  /// A request to set a playback current position to a defined one.
+  /// @param (double)kKeyTime A new current playback position.
   kSeek = 4,
 
-        /// A request to change stream representation to a defined one.
-        /// @param (int)kKeyType An information whether a
-        ///   <code>Video = 0</code> or an <code>Audio = 1</code> stream needs
-        ///   to be changed.
-        /// @param (int)kKeyId An index of a stream representation which should
-        ///   be used.
-
+  /// A request to change stream representation to a defined one.
+  /// @param (int)kKeyType An information whether a
+  ///   <code>Video = 0</code> or an <code>Audio = 1</code> stream needs
+  ///   to be changed.
+  /// @param (int)kKeyId An index of a stream representation which should
+  ///   be used.
   kChangeRepresentation = 5,
-        /// A request to change subtitles representation to a defined one.
-        /// @param (int)kKeyId An index of a subtitles representation which
-        ///   should be used.
+
+  /// A request to change subtitles representation to a defined one.
+  /// @param (int)kKeyId An index of a subtitles representation which
+  ///   should be used.
   kChangeSubtitlesRepresentation = 7,
 
-        /// A request to enable or disable subtitle events, depending on the
-        /// previous state. Initially subtitles events are enabled. No
-        /// additional parameters.
+  /// A request to enable or disable subtitle events, depending on the
+  /// previous state. Initially subtitles events are enabled. No
+  /// additional parameters.
   kChangeSubtitlesVisibility = 8,
 
-        /// An information about the players position and size.
-        /// @param (int)XCoordination An x position of the players left upper
-        ///   corner.
-        /// @param (int)YCoordination A y position of the players left upper
-        ///   corner.
-        /// @param (int)kKeyWidth A width of the players window.
-        /// @param (int)kKeyHeight A height of the players window.
-  kChangeViewRect
+  /// An information about the players position and size.
+  /// @param (int)XCoordination An x position of the players left upper
+  ///   corner.
+  /// @param (int)YCoordination A y position of the players left upper
+  ///   corner.
+  /// @param (int)kKeyWidth A width of the players window.
+  /// @param (int)kKeyHeight A height of the players window.
+  kChangeViewRect = 9,
 };
 
 /// @enum MessageFromPlayer
@@ -105,62 +105,66 @@ enum MessageToPlayer {
 ///   when accurate event occurs, or related operation have been completed.
 /// @see kKeyMessageToPlayer
 enum MessageFromPlayer {
-          /// An information from the player about current playback position.
-          /// @param (double)kKeyTime A value which holds current playback
-          ///   position in seconds.
-    kTimeUpdate = 100,
+  /// An information from the player about current playback position.
+  /// @param (double)kKeyTime A value which holds current playback
+  ///   position in seconds.
+  kTimeUpdate = 100,
 
-          /// An information from the player about the duration of the loaded
-          /// content.
-          /// @param (double)kKeyTime A value which holds the content duration
-          ///   in seconds.
-    kSetDuration = 101,
+  /// An information from the player about the duration of the loaded
+  /// content.
+  /// @param (double)kKeyTime A value which holds the content duration
+  ///   in seconds.
+  kSetDuration = 101,
 
-          /// An information from the player that buffering have been finished;
-          /// no additional parameters.
-    kBufferingCompleted = 102,
+  /// An information from the player that buffering have been finished;
+  /// no additional parameters.
+  kBufferingCompleted = 102,
 
-          /// An information from the player about an Audio representation.
-          /// @param (int)kKeyId An index of the Audio representation.
-          /// @param (int)kKeyBitrate A bitrate of the Audio representation.
-          /// @param (string)kKeyLanguage A language code of the Audio
-          ///   representation.
-          /// @note When the player finishes loading the content, messages
-          ///   about all available Audio representation are sent.
-    kAudioRepresentation = 103,
+  /// An information from the player about an Audio representation.
+  /// @param (int)kKeyId An index of the Audio representation.
+  /// @param (int)kKeyBitrate A bitrate of the Audio representation.
+  /// @param (string)kKeyLanguage A language code of the Audio
+  ///   representation.
+  /// @note When the player finishes loading the content, messages
+  ///   about all available Audio representation are sent.
+  kAudioRepresentation = 103,
 
-          /// An information from the player about a Video representation.
-          /// @param (int)kKeyId An index of the Video representation.
-          /// @param (int)kKeyBitrate A bitrate of the Video representation.
-          /// @param (int)kKeyHeight A height of the Video representation
-          ///   resolution.
-          /// @param (int)kKeyWidth A width of the Video representation
-          ///   resolution.
-          /// @note When the player finishes loading the content, messages
-          ///   about all available Video representation are sent.
-    kVideoRepresentation = 104,
+  /// An information from the player about a Video representation.
+  /// @param (int)kKeyId An index of the Video representation.
+  /// @param (int)kKeyBitrate A bitrate of the Video representation.
+  /// @param (int)kKeyHeight A height of the Video representation
+  ///   resolution.
+  /// @param (int)kKeyWidth A width of the Video representation
+  ///   resolution.
+  /// @note When the player finishes loading the content, messages
+  ///   about all available Video representation are sent.
+  kVideoRepresentation = 104,
 
-          /// An information from the player about subtitles representation.
-          /// @param (int)kKeyId An index of the subtitles representation.
-          /// @param (string)kKeyLanguage A language of the subtitle
-          ///   representation.
-          /// @note When the player finishes loading the content, messages
-          ///   about all available subtitles representation are sent.
-    kSubtitlesRepresentation = 105,
+  /// An information from the player about subtitles representation.
+  /// @param (int)kKeyId An index of the subtitles representation.
+  /// @param (string)kKeyLanguage A language of the subtitle
+  ///   representation.
+  /// @note When the player finishes loading the content, messages
+  ///   about all available subtitles representation are sent.
+  kSubtitlesRepresentation = 105,
 
-          /// An information that a defined representation has been changed.
-          /// @param (int)kKeyType A definition whether the message is about
-          ///   a <code>Video = 0</code> or an <code>Audio = 1</code> stream.
-          /// @param (int)kKeyId An index of the currently used representation.
-    kRepresentationChanged = 106,
+  /// An information that a defined representation has been changed.
+  /// @param (int)kKeyType A definition whether the message is about
+  ///   a <code>Video = 0</code> or an <code>Audio = 1</code> stream.
+  /// @param (int)kKeyId An index of the currently used representation.
+  kRepresentationChanged = 106,
 
-          /// An information from the player that a subtitle sent in a message
-          /// should be shown.
-          /// @param (double)kKeyDuration An information (in seconds) for how
-          ///   long from the current moment, a sent subtitle should be visible.
-          /// @param (string)kKeySubtitle A string which includes a subtitle
-          ///   which should be presented.
-    kSubtitles = 107,
+  /// An information from the player that a subtitle sent in a message
+  /// should be shown.
+  /// @param (double)kKeyDuration An information (in seconds) for how
+  ///   long from the current moment, a sent subtitle should be visible.
+  /// @param (string)kKeySubtitle A string which includes a subtitle
+  ///   which should be presented.
+  kSubtitles = 107,
+
+  /// An information from the player that stream has finished;
+  /// no additional parameters.
+  kStreamEnded = 108,
 };
 
 /// @enum ClipTypeEnum
@@ -168,14 +172,13 @@ enum MessageFromPlayer {
 /// this information the player can prepare accurate playback pipeline. \n
 /// It is used in a <code>MessageToPlayer::kLoadMedia</code> message.
 enum class ClipTypeEnum {
-          /// @private this type enum value is not supported.
-
+  /// @private this type enum value is not supported.
   kUnknown = 0,
-          /// Requested content is a media container.
 
+  /// Requested content is a media container.
   kUrl = 1,
-          /// Requested content is a dash manifest.
 
+  /// Requested content is a dash manifest.
   kDash = 2
 };
 

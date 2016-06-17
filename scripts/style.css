@@ -406,6 +406,16 @@ textarea {
   z-index: 10;
 }
 
+#ended {
+  position: absolute;
+  top: 50%;
+  left: 25%;
+  font-size: 50px;
+  color: red;
+  display : none;
+  z-index: 10;
+}
+
 #subtitle {
   position: absolute;
   bottom: 5%;

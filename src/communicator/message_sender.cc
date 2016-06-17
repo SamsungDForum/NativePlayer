@@ -99,6 +99,12 @@ void MessageSender::SetTextTracks(const std::vector<TextTrackInfo>& reps) {
   }
 }
 
+void MessageSender::StreamEnded() {
+  VarDictionary message;
+  message.Set(kKeyMessageFromPlayer, MessageFromPlayer::kStreamEnded);
+  PostMessage(message);
+}
+
 void MessageSender::PostMessage(const Var& message) {
   instance_->PostMessage(message);
 }

@@ -45,8 +45,9 @@ static const uint32_t kMicrosecondsPerSecond = 1000000;
 static const TimeTicks kOneMicrosecond = 1.0 / kMicrosecondsPerSecond;
 static const AVRational kMicrosBase = {1, kMicrosecondsPerSecond};
 
-const uint32_t kAudioStreamProbeSize = 64 * 1024;
-const uint32_t kVideoStreamProbeSize = 262144;
+static const uint32_t kAnalyzeDuration = 10 * kMicrosecondsPerSecond;
+static const uint32_t kAudioStreamProbeSize = 32 * 1024;
+static const uint32_t kVideoStreamProbeSize = 128 * 1024;
 
 static TimeTicks ToTimeTicks(int64_t time_ticks, AVRational time_base) {
   int64_t us = av_rescale_q(time_ticks, time_base, kMicrosBase);
@@ -141,6 +142,7 @@ bool FFMpegDemuxer::Init(const InitCallback& callback,
 
   // Change this value in case when clip is not well recognized by ffmpeg
   format_context_->probesize = probe_size_;
+  format_context_->max_analyze_duration = kAnalyzeDuration;
   format_context_->flags |= AVFMT_FLAG_CUSTOM_IO;
   format_context_->pb = io_context_;
 
@@ -387,6 +389,7 @@ bool FFMpegDemuxer::InitStreamInfo() {
     }
     av_dump_format(format_context_, NULL, NULL, NULL);
   }
+  UpdateContentProtectionConfig();
 
   audio_stream_idx_ =
       av_find_best_stream(format_context_, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
@@ -399,8 +402,6 @@ bool FFMpegDemuxer::InitStreamInfo() {
   if (video_stream_idx_ >= 0) {
     UpdateVideoConfig();
   }
-
-  UpdateContentProtectionConfig();
 
   LOG_DEBUG("Configs updated");
   if (!streams_initialized_) {

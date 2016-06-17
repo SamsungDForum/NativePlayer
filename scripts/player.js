@@ -87,6 +87,10 @@ function enterSelect(element) {
   element.size = element.length;
 }
 
+function setControl(new_control) {
+  changeControl(new_control - selected_control);
+}
+
 function changeControl(step) {
   var element = document.getElementById(ControlButtons[selected_control].id);
   if (selected_control == ControlButtonEnum.kVideoRep ||
@@ -156,13 +160,13 @@ function keyHandler(e) {
     updateSelectedIndex(kNext);
     break;
   case TvKeyEnum.kKeyRed:
-    selectSubtitles();
+    setControl(ControlButtonEnum.kSubtitleRep);
     break;
   case TvKeyEnum.kKeyGreen:
-    selectVideo();
+    setControl(ControlButtonEnum.kVideoRep);
     break;
   case TvKeyEnum.kKeyYellow:
-    selectAudio();
+    setControl(ControlButtonEnum.kAudioRep);
     break;
   case TvKeyEnum.kKeyBlue:
     showLogs();

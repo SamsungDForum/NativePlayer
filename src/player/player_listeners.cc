@@ -28,6 +28,9 @@ void MediaPlayerListener::OnTimeUpdate(TimeTicks time) {
 
 void MediaPlayerListener::OnEnded() {
   LOG("Event: Media ended.");
+  if (auto message_sender = message_sender_.lock()) {
+     message_sender->StreamEnded();
+  }
 }
 
 void MediaPlayerListener::OnError(MediaPlayerError error) {
