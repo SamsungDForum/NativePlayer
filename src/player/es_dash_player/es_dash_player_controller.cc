@@ -261,6 +261,7 @@ void EsDashPlayerController::OnSeek(int32_t ret) {
   TimeTicks current_playback_time = 0.0;
   player_->GetCurrentTime(current_playback_time);
   LOG("After seek time: %f, result: %d", current_playback_time, ret);
+  message_sender_->BufferingCompleted();
 }
 
 void EsDashPlayerController::ChangeRepresentation(StreamType stream_type,
