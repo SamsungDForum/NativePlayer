@@ -12,7 +12,6 @@ function keyMenuHandler(e) {
   switch (key_code) {
   case TvKeyEnum.kKeyEnter:
     showPlayer();
-    document.body.addEventListener('keydown', keyHandler);
     break;
   case TvKeyEnum.kKeyRight:
     changeClip(kNext);

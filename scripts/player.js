@@ -35,10 +35,7 @@ function initPlayer() {
   selected_clip = getQueryVariable('clip');
   if (clips[selected_clip].type == ClipTypeEnum.kUrl)
     ControlButtons.length = kUrlButtonControls;
-}
 
-function exampleSpecificActionAfterNaclLoad() {
-  onLoadClick();
   document.getElementById('total_bar').addEventListener('click', onSeekClicked, false);
   document.getElementById('total_bar').addEventListener('mousemove', onSeekHover, false);
   document.getElementById('total_bar').addEventListener('mouseout', onSeekOut, false);
@@ -61,10 +58,13 @@ function exampleSpecificActionAfterNaclLoad() {
         tizen.tvinputdevice.registerKey(button);
     });
   }
-
   document.body.addEventListener('keydown', keyHandler);
   var element = document.getElementById('play_btn');
   element.classList.add('selected');
+}
+
+function exampleSpecificActionAfterNaclLoad() {
+  onLoadClick();
 }
 
 function showMenu() {
