@@ -19,6 +19,17 @@ function keyMenuHandler(e) {
   case TvKeyEnum.kKeyLeft:
     changeClip(kPrevious);
     break;
+  case TvKeyEnum.kKeyReturn:
+    if (window.parent) {
+      e.preventDefault();
+      window.blur();
+      window.parent.focus();
+      if (window.parent.is_widget_in_fullscreen) {
+        window.parent.document.getElementById("pass_fail_div").style.display = 'block';
+        window.parent.typeMouseUpFullscreen();
+      }
+    }
+    break;
   }
 }
 
