@@ -40,6 +40,7 @@ function printIfLog(message) {
   if ((typeof message == "string") && (uses_logging == true) &&
           (startsWith(message, kLogPrefix) || startsWith(message, kErrorPrefix)
            || startsWith(message, kDebugPrefix))) {
+    console.log(message);
     logs.value += message;
     logs.scrollTop = logs.scrollHeight;
     return true;
