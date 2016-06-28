@@ -12,6 +12,7 @@ function keyMenuHandler(e) {
   switch (key_code) {
   case TvKeyEnum.kKeyEnter:
     showPlayer();
+    document.body.addEventListener('keydown', keyHandler);
     break;
   case TvKeyEnum.kKeyRight:
     changeClip(kNext);
@@ -19,13 +20,20 @@ function keyMenuHandler(e) {
   case TvKeyEnum.kKeyLeft:
     changeClip(kPrevious);
     break;
+  case TvKeyEnum.kKeyDown:
+    changeSub(kNext);
+    break;
+  case TvKeyEnum.kKeyUp:
+    changeSub(kPrevious);
+    break;
   case TvKeyEnum.kKeyReturn:
     if (window.parent) {
       e.preventDefault();
       window.blur();
       window.parent.focus();
       if (window.parent.is_widget_in_fullscreen) {
-        window.parent.document.getElementById("pass_fail_div").style.display = 'block';
+        var element = window.parent.document.getElementById("pass_fail_div");
+        element.style.display = 'block';
         window.parent.typeMouseUpFullscreen();
       }
     }
@@ -51,6 +59,37 @@ function setDescription(object, index) {
   object.innerHTML += '<br>' + clips[index].describe
       + '<br><br>Source:&nbsp<font color="grey">' + clips[selected_clip].url
       + '</font>';
+}
+
+function changeSub(step) {
+  var element = document.getElementById('subtitles_menu');
+  element.selectedIndex = modulo(element.selectedIndex + step, element.size);
+}
+
+function setSubtitlesMenu(index) {
+  var subtitles = document.getElementById('subtitles_menu');
+  subtitles.length = 0;
+  if (clips[index].subtitles == null) {
+    document.getElementById('sub_menu').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('sub_menu').style.display = 'block';
+  var option = document.createElement('option');
+  option.text = 'none';
+  subtitles.add(option, 0);
+  clips[index].subtitles.forEach(function (item, id) {
+    var option = document.createElement('option');
+    option.text = 'Encoding: ';
+    if (item.encoding != null)
+      option.text += item.encoding;
+    else
+      option.text += 'default UTF-8';
+    option.text += '  ' + item.subtitle
+    subtitles.add(option, id+1);
+  });
+  subtitles.selectedIndex = 0;
+  subtitles.size = subtitles.length;
 }
 
 function changeClip(step) {
@@ -86,6 +125,7 @@ function changeClip(step) {
   setBackground(inputObject, selected_clip);
   setTitle(inputObject, selected_clip);
   setDescription(inputObject, selected_clip);
+  setSubtitlesMenu(selected_clip);
 
   var next = modulo(selected_clip + 1, clips.length);
   inputObject = document.getElementById('right');
@@ -104,5 +144,7 @@ function changeClip(step) {
 }
 
 function showPlayer() {
-  window.location.href = 'player.html?clip=' + selected_clip;
+  var element = document.getElementById('subtitles_menu');
+  window.location.href = 'player.html?clip=' + selected_clip +
+    '&sub=' + element.selectedIndex;
 }

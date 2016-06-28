@@ -18,7 +18,9 @@ var clips = [
   {
     title: 'Google DASH Car',
     url: 'http://yt-dash-mse-test.commondatastorage.googleapis.com/media/car-20120827-manifest.mpd',
-    subtitle: './subs/sample_cyrilic_utf8.srt',
+    subtitles: [
+      { subtitle: './subs/sample_cyrilic_utf8.srt' },
+    ],
     type: ClipTypeEnum.kDash,
     poster: 'resources/car.jpg',
     describe: 'This is clip with DASH content. User can choose desired video/audio representation',
@@ -33,7 +35,10 @@ var clips = [
   {
     title: 'Big Buck Bunny mp4',
     url: 'http://distribution.bbb3d.renderfarming.net/video/mp4/bbb_sunflower_1080p_30fps_normal.mp4',
-    subtitle: './subs/sample_cyrilic.srt',
+    subtitles: [
+      { subtitle: './subs/sample_cyrilic.srt', encoding: 'windows-1251' },
+      { subtitle: './subs/sample_cyrilic_utf8.srt' },
+    ],
     encoding: 'windows-1251',
     type: ClipTypeEnum.kUrl,
     poster: 'resources/bunny.jpg',
@@ -180,6 +185,7 @@ var show_subtitles = true;
 var ui_enabled = false;
 
 var selected_clip = kInit;
+var selected_subs = kInit;
 var selected_control = ControlButtonEnum.kPlay;
 
 function modulo(dividend, divisor) {
@@ -365,10 +371,19 @@ function onSubsClick() {
 
 function onLoadClick() {
   ui_enabled = false;
+
+  var subtitles;
+  var encoding;
+  var element = document.getElementById('subtitles_menu');
+  if (clips[selected_clip].subtitles && selected_subs > 0) {
+    var index = selected_subs - 1;
+    subtitles = clips[selected_clip].subtitles[index].subtitle;
+    encoding = clips[selected_clip].subtitles[index].encoding;
+  }
   nacl_module.postMessage({'messageToPlayer': MessageToPlayerEnum.kLoadMedia,
                            'type' : clips[selected_clip].type,
-                           'subtitle': clips[selected_clip].subtitle,
-                           'encoding': clips[selected_clip].encoding,
+                           'subtitle': subtitles,
+                           'encoding': encoding,
                            'url': clips[selected_clip].url});
 }
 

@@ -35,7 +35,7 @@ function initPlayer() {
   selected_clip = getQueryVariable('clip');
   if (clips[selected_clip].type == ClipTypeEnum.kUrl)
     ControlButtons.length = kUrlButtonControls;
-
+  selected_subs = getQueryVariable('sub');
   document.getElementById('total_bar').addEventListener('click', onSeekClicked, false);
   document.getElementById('total_bar').addEventListener('mousemove', onSeekHover, false);
   document.getElementById('total_bar').addEventListener('mouseout', onSeekOut, false);

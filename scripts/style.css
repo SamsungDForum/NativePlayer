@@ -80,6 +80,14 @@ textarea {
   display: block;
 }
 
+#sub_menu {
+  display: none;
+}
+
+#subtitles_menu {
+  width: 30%;
+}
+
 #main_buttons {
   position: absolute;
   top: 300px;
