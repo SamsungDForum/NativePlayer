@@ -31,7 +31,7 @@ using std::placeholders::_1;
 void UrlPlayerController::InitPlayer(const std::string& url,
                                      const std::string& subtitle,
                                      const std::string& encoding) {
-  LOG("Loading media from : [%s]", url.c_str());
+  LOG_INFO("Loading media from : [%s]", url.c_str());
   CleanPlayer();
 
   player_thread_ = MakeUnique<pp::SimpleThread>(instance_);
@@ -76,28 +76,28 @@ void UrlPlayerController::InitPlayer(const std::string& url,
 
 void UrlPlayerController::InitializeUrlPlayer(
     const std::string& content_container_url) {
-  LOG("Play content directly from URL = %s ", content_container_url.c_str());
+  LOG_INFO("Play content directly from URL = %s ", content_container_url.c_str());
   data_source_ = make_shared<URLDataSource>(content_container_url);
   player_->AttachDataSource(*data_source_);
   TimeTicks duration;
   if (player_->GetDuration(duration) == ErrorCodes::Success) {
     message_sender_->SetMediaDuration(duration);
-    LOG("Got duration: %f [s].", duration);
+    LOG_INFO("Got duration: %f [s].", duration);
   } else {
-    LOG("Failed to retreive duration!");
+    LOG_INFO("Failed to retreive duration!");
   }
   PostTextTrackInfo();
 }
 
 void UrlPlayerController::Play() {
   if (!player_) {
-    LOG("Play. player is not initialized, cannot play");
+    LOG_INFO("Play. player is not initialized, cannot play");
     return;
   }
 
   int32_t ret = player_->Play();
   if (ret == ErrorCodes::Success) {
-    LOG("Play called successfully");
+    LOG_INFO("Play called successfully");
   } else {
     LOG_ERROR("Play call failed, code: %d", ret);
   }
@@ -105,20 +105,20 @@ void UrlPlayerController::Play() {
 
 void UrlPlayerController::Pause() {
   if (!player_) {
-    LOG("Pause. player is not initialized");
+    LOG_INFO("Pause. player is not initialized");
     return;
   }
 
   int32_t ret = player_->Pause();
   if (ret == ErrorCodes::Success) {
-    LOG("Pause called successfully");
+    LOG_INFO("Pause called successfully");
   } else {
     LOG_ERROR("Pause call failed, code: %d", ret);
   }
 }
 
 void UrlPlayerController::Seek(TimeTicks to_time) {
-  LOG("Seek to %f", to_time);
+  LOG_INFO("Seek to %f", to_time);
   int32_t ret =
       player_->Seek(to_time, std::bind(&UrlPlayerController::OnSeek, this, _1));
   if (ret < ErrorCodes::CompletionPending) {
@@ -128,7 +128,7 @@ void UrlPlayerController::Seek(TimeTicks to_time) {
 
 void UrlPlayerController::ChangeRepresentation(StreamType /*stream_type*/,
                                                int32_t /*id*/) {
-  LOG("URLplayer doesnt support changing representation");
+  LOG_INFO("URLplayer doesnt support changing representation");
 }
 
 void UrlPlayerController::SetViewRect(const Rect& view_rect) {
@@ -145,7 +145,7 @@ void UrlPlayerController::SetViewRect(const Rect& view_rect) {
 void UrlPlayerController::PostTextTrackInfo() {
   int32_t ret = player_->GetTextTracksList(text_track_list_);
   if (ret == ErrorCodes::Success) {
-    LOG("GetTextTrackInfo called successfully");
+    LOG_INFO("GetTextTrackInfo called successfully");
     message_sender_->SetTextTracks(text_track_list_);
   } else {
     LOG_ERROR("GetTextTrackInfo call failed, code: %d", ret);
@@ -153,7 +153,7 @@ void UrlPlayerController::PostTextTrackInfo() {
 }
 
 void UrlPlayerController::ChangeSubtitles(int32_t id) {
-  LOG("Change subtitle to %d", id);
+  LOG_INFO("Change subtitle to %d", id);
   player_thread_->message_loop().PostWork(
       cc_factory_.NewCallback(
           &UrlPlayerController::OnChangeSubtitles, id));
@@ -161,7 +161,7 @@ void UrlPlayerController::ChangeSubtitles(int32_t id) {
 
 void UrlPlayerController::ChangeSubtitleVisibility() {
   subtitles_visible_ = !subtitles_visible_;
-  LOG("Change subtitle visibility to %d", subtitles_visible_);
+  LOG_INFO("Change subtitle visibility to %d", subtitles_visible_);
   player_thread_->message_loop().PostWork(
       cc_factory_.NewCallback(
           &UrlPlayerController::OnChangeSubVisibility,
@@ -179,14 +179,14 @@ void UrlPlayerController::OnSetDisplayRect(int32_t ret) {
 void UrlPlayerController::OnSeek(int32_t ret) {
   TimeTicks current_playback_time = 0.0;
   player_->GetCurrentTime(current_playback_time);
-  LOG("After seek time: %f, result: %d", current_playback_time, ret);
+  LOG_INFO("After seek time: %f, result: %d", current_playback_time, ret);
 }
 
 void UrlPlayerController::OnChangeSubtitles(int32_t, int32_t id) {
   int32_t ret =
       player_->SelectTrack(Samsung::NaClPlayer::ElementaryStreamType_Text, id);
   if (ret == ErrorCodes::Success) {
-    LOG("SelectTrack called successfully");
+    LOG_INFO("SelectTrack called successfully");
   } else {
     LOG_ERROR("SelectTrack call failed, code: %d", ret);
   }
@@ -200,7 +200,7 @@ void UrlPlayerController::OnChangeSubVisibility(int32_t, bool show) {
 }
 
 void UrlPlayerController::CleanPlayer() {
-  LOG("Cleaning player.");
+  LOG_INFO("Cleaning player.");
   if (player_) return;
   data_source_.reset();
   state_ = PlayerState::kUnitialized;

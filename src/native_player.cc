@@ -47,7 +47,7 @@ void NativePlayer::HandleMessage(const pp::Var& message) {
 
 bool NativePlayer::Init(uint32_t argc, const char** argn, const char** argv) {
   Logger::InitializeInstance(this);
-  LOG("Start Init");
+  LOG_INFO("Start Init");
   for (uint32_t i = 0; i < argc; i++) {
     if (strcmp(argn[i], kLogCmd) == 0 && strcmp(argv[i], kLogDebug) == 0)
       Logger::EnableDebugLogs(true);
@@ -67,7 +67,7 @@ bool NativePlayer::Init(uint32_t argc, const char** argn, const char** argv) {
   RegisterMessageHandler(message_receiver_.get(),
                          player_thread_.message_loop());
 
-  LOG("Finished Init");
+  LOG_INFO("Finished Init");
 
   return true;
 }

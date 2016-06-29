@@ -24,7 +24,7 @@
 #include "logger.h"
 
 #define LOG_STATS __LINE__, __func__, __FILE__
-#define LOG(msg, ...) Logger::Log(LOG_STATS, msg, ##__VA_ARGS__)
+#define LOG_INFO(msg, ...) Logger::Info(LOG_STATS, msg, ##__VA_ARGS__)
 #define LOG_ERROR(msg, ...) Logger::Error(LOG_STATS, msg, ##__VA_ARGS__)
 #define LOG_DEBUG(msg, ...) Logger::Debug(LOG_STATS, msg, ##__VA_ARGS__)
 

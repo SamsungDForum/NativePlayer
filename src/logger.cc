@@ -23,7 +23,7 @@
 pp::Instance* Logger::instance_ = NULL;
 bool Logger::show_debug_ = false;
 
-const char* kLogPrefix = "LOG: ";
+const char* kInfoPrefix = "INFO: ";
 const char* kDebugPrefix = "DEBUG: ";
 const char* kErrorPrefix = "ERROR: ";
 const unsigned kMaxMessageSize = 256;
@@ -33,22 +33,22 @@ void Logger::InitializeInstance(pp::Instance* instance) {
     instance_ = instance;
 }
 
-void Logger::Log(const std::string& message) {
-  InternalPrint(kLogPrefix, message);
+void Logger::Info(const std::string& message) {
+  InternalPrint(kInfoPrefix, message);
 }
 
-void Logger::Log(const char* message_format, ...) {
+void Logger::Info(const char* message_format, ...) {
   va_list arguments_list;
   va_start(arguments_list, message_format);
-  InternalPrint(kLogPrefix, message_format, arguments_list);
+  InternalPrint(kInfoPrefix, message_format, arguments_list);
   va_end(arguments_list);
 }
 
-void Logger::Log(int line, const char* func,const char* file,
+void Logger::Info(int line, const char* func,const char* file,
     const char* message_format, ...)  {
   va_list arguments_list;
   va_start(arguments_list, message_format);
-  InternalPrint(line, func, file, kLogPrefix, message_format, arguments_list);
+  InternalPrint(line, func, file, kInfoPrefix, message_format, arguments_list);
   va_end(arguments_list);
 }
 
@@ -103,8 +103,8 @@ void Logger::EnableDebugLogs(bool flag) {
 void Logger::InternalPrint(const char* prefix, const std::string& message) {
   if (instance_)
     instance_->PostMessage(prefix + message + "\n");
-  if (prefix == kLogPrefix)
-    LOG_POINT("%s", message.c_str());
+  if (prefix == kInfoPrefix)
+    INFO_POINT("%s", message.c_str());
   else if (prefix == kDebugPrefix)
     DEBUG_POINT("%s", message.c_str());
   if (prefix == kErrorPrefix)
@@ -118,8 +118,8 @@ void Logger::InternalPrint(const char* prefix, const char* message_format,
     std::string log_format = std::string(prefix) + message_format + "\n";
     vsnprintf(buff, kMaxMessageSize, log_format.c_str(), arguments_list);
     instance_->PostMessage(buff);
-    if (prefix == kLogPrefix)
-      LOG_POINT("%s", buff);
+    if (prefix == kInfoPrefix)
+      INFO_POINT("%s", buff);
     else if (prefix == kDebugPrefix)
       DEBUG_POINT("%s", buff);
     if (prefix == kErrorPrefix)
@@ -135,8 +135,8 @@ void Logger::InternalPrint(int line, const char* func, const char* file,
     std::string log_format = std::string(prefix) + message_format + "\n";
     vsnprintf(buff, kMaxMessageSize, log_format.c_str(), arguments_list);
     instance_->PostMessage(buff);
-    if (prefix == kLogPrefix)
-      LOG_POINT("[%s/%s:%d] %s", file, func, line, buff);
+    if (prefix == kInfoPrefix)
+      INFO_POINT("[%s/%s:%d] %s", file, func, line, buff);
     else if (prefix == kDebugPrefix)
       DEBUG_POINT("[%s/%s:%d] %s", file, func, line, buff);
     if (prefix == kErrorPrefix)

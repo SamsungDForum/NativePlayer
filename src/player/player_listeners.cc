@@ -14,7 +14,7 @@ using pp::Var;
 
 void SubtitleListener::OnShowSubtitle(TimeTicks duration, const char* text) {
   Var varText = Var(text);
-  LOG("Got subtitle: %s , duration: %f", text, duration);
+  LOG_INFO("Got subtitle: %s , duration: %f", text, duration);
   if (auto message_sender = message_sender_.lock()) {
     message_sender->ShowSubtitles(duration, varText);
   }
@@ -27,26 +27,26 @@ void MediaPlayerListener::OnTimeUpdate(TimeTicks time) {
 }
 
 void MediaPlayerListener::OnEnded() {
-  LOG("Event: Media ended.");
+  LOG_INFO("Event: Media ended.");
   if (auto message_sender = message_sender_.lock()) {
      message_sender->StreamEnded();
   }
 }
 
 void MediaPlayerListener::OnError(MediaPlayerError error) {
-  LOG("Event: Error occurred. Error no: %d.", error);
+  LOG_INFO("Event: Error occurred. Error no: %d.", error);
 }
 
 void MediaBufferingListener::OnBufferingStart() {
-  LOG("Event: Buffering started, wait for the end.");
+  LOG_INFO("Event: Buffering started, wait for the end.");
 }
 
 void MediaBufferingListener::OnBufferingProgress(uint32_t percent) {
-  LOG("Event: Buffering progress: %d %%.", percent);
+  LOG_INFO("Event: Buffering progress: %d %%.", percent);
 }
 
 void MediaBufferingListener::OnBufferingComplete() {
-  LOG("Event: Buffering complete! Now you may play.");
+  LOG_INFO("Event: Buffering complete! Now you may play.");
   if (auto message_sender = message_sender_.lock()) {
     message_sender->BufferingCompleted();
   }

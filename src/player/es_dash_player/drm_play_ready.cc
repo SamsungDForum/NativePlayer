@@ -46,7 +46,7 @@ DrmPlayReadyListener::DrmPlayReadyListener(
 void DrmPlayReadyListener::OnInitdataLoaded(DRMType drm_type,
                                               uint32_t init_data_size,
                                               const void* init_data) {
-  LOG("drm_type: %d, init_data_size: %d", drm_type, init_data_size);
+  LOG_INFO("drm_type: %d, init_data_size: %d", drm_type, init_data_size);
   LOG_DEBUG("init_data str: [[%s]]",
             ToHexString(init_data_size,
                         static_cast<const uint8_t*>(init_data)).c_str());
@@ -125,7 +125,7 @@ void DrmPlayReadyListener::ProcessLicenseRequestOnSideThread(
     return;
   }
 
-  LOG("Successfully installed license.");
+  LOG_INFO("Successfully installed license.");
 }
 
 shared_ptr<ContentProtectionDescriptor>

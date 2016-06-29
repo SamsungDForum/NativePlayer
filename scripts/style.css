@@ -15,6 +15,7 @@ body {
   min-height: 100%;
   word-wrap: break-word;
   text-align: center;
+  overflow: hidden;
 }
 
 code {
@@ -236,7 +237,19 @@ textarea {
   right: 0px;
   top: 140px;
   width: 300px;
+  height: 700px;
   display: none;
+}
+
+#logs {
+  width: 300px;
+  height: 660px;
+  word-wrap: break-word;
+  background: white;
+  overflow: scroll;
+  text-align: left;
+  font-size: 10px;
+  font-family: monospace;
 }
 
 #support {

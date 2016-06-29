@@ -160,7 +160,7 @@ void StreamManager::Impl::OnEnoughData() {
 }
 
 void StreamManager::Impl::OnSeekData(TimeTicks new_position) {
-  LOG("Type: %s position:: %f",
+  LOG_INFO("Type: %s position:: %f",
       stream_type_ == StreamType::Video ? "VIDEO" : "AUDIO", new_position);
   if (!init_seek_) {
     init_seek_ = true;
@@ -178,7 +178,7 @@ void StreamManager::Impl::OnSeekData(TimeTicks new_position) {
     packets_.clear();
   }
   demuxer_.reset();
-  LOG("Parser reset");
+  LOG_INFO("Parser reset");
   if (InitParser()) {
     ParseInitSegment();
     data_provider_->SetNextSegmentToTime(need_time_);
@@ -385,7 +385,7 @@ void StreamManager::Impl::SetMediaSegmentSequence(
     need_time_ = buffered_segments_time_;
     demuxer_.reset();
     drm_initialized_ = false;
-    LOG("Parser reset");
+    LOG_INFO("Parser reset");
     if (InitParser()) ParseInitSegment();
   }
   data_provider_->SetNextSegmentToTime(
@@ -395,7 +395,7 @@ void StreamManager::Impl::SetMediaSegmentSequence(
 }
 
 void StreamManager::Impl::GotSegment(std::unique_ptr<MediaSegment> segment) {
-  LOG("Got segment: duration: %f, data.size(): %d, timestamp: %f",
+  LOG_INFO("Got segment: duration: %f, data.size(): %d, timestamp: %f",
       segment->duration_, segment->data_.size(), segment->timestamp_);
   segment_pending_ = false;
   if (seeking_ && (need_time_ < segment->duration_ + segment->timestamp_) &&
@@ -443,7 +443,7 @@ void StreamManager::Impl::OnESPacket(StreamDemuxer::Message msg,
 }
 
 void StreamManager::Impl::OnAudioConfig(const AudioConfig& audio_config) {
-  LOG("OnAudioConfig codec_type: %d!", audio_config.codec_type);
+  LOG_INFO("OnAudioConfig codec_type: %d!", audio_config.codec_type);
   LOG_DEBUG(
       "audio configuration - codec: %d, profile: %d, sample_format: %d,"
       " bits_per_channel: %d, channel_layout: %d, samples_per_second: %d",
@@ -452,7 +452,7 @@ void StreamManager::Impl::OnAudioConfig(const AudioConfig& audio_config) {
       audio_config.channel_layout, audio_config.samples_per_second);
 
   if (audio_config_ == audio_config) {
-    LOG("The same config as before");
+    LOG_INFO("The same config as before");
     return;
   }
 
@@ -482,7 +482,7 @@ void StreamManager::Impl::OnAudioConfig(const AudioConfig& audio_config) {
 }
 
 void StreamManager::Impl::OnVideoConfig(const VideoConfig& video_config) {
-  LOG("OnVideoConfig codec_type: %d!", video_config.codec_type);
+  LOG_INFO("OnVideoConfig codec_type: %d!", video_config.codec_type);
   LOG_DEBUG(
       "video configuration - codec: %d, profile: %d, frame: %d "
       "visible_rect: %d %d ",
@@ -490,7 +490,7 @@ void StreamManager::Impl::OnVideoConfig(const VideoConfig& video_config) {
       video_config.frame_format, video_config.size.width,
       video_config.size.height);
   if (video_config_ == video_config) {
-    LOG("The same config as before");
+    LOG_INFO("The same config as before");
     return;
   }
 
@@ -523,7 +523,7 @@ void StreamManager::Impl::OnDRMInitData(const std::string& type,
   LOG_DEBUG("stream type: %d, init data type: %s, init_data.size(): %d",
             stream_type_, type.c_str(), init_data.size());
   if (drm_initialized_) {
-    LOG("DRM initialized already");
+    LOG_INFO("DRM initialized already");
     return;
   }
   LOG_DEBUG("init_data hex str: [[%s]]",

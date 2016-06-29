@@ -19,7 +19,7 @@
 #include "ppapi/cpp/instance.h"
 
 #ifdef DEBUG_LOGS
-#define LOG_POINT(format, ...) do { \
+#define INFO_POINT(format, ...) do { \
   printf("\033[32m" format "\033[0m", \
    ##__VA_ARGS__); \
   fflush(stdout); \
@@ -35,7 +35,7 @@
   fflush(stdout); \
 } while (0)
 #else
-#define LOG_POINT(format, ...) /* */
+#define INFO_POINT(format, ...) /* */
 #define DEBUG_POINT(format, ...) /* */
 #define ERROR_POINT(format, ...) /* */
 #endif
@@ -52,23 +52,23 @@ class Logger {
   static void InitializeInstance(pp::Instance* instance);
 
   /**
-   * Adds a log prefix and a newline character at the end to the passed string
+   * Adds an info prefix and a newline character at the end to the passed string
    * and sends it to JS.
    */
-  static void Log(const std::string& message);
+  static void Info(const std::string& message);
 
   /**
    * Does the same as log(const std::string&), but takes arguments like standard
    * stdio printf() function.
    * \link http://www.cplusplus.com/reference/cstdio/printf/
    */
-  static void Log(const char* message_format, ...);
+  static void Info(const char* message_format, ...);
 
   /**
    * Does the same as Log(const char* message_format, ...),
    * but takes also arguments to provide info from where it was called
    */
-  static void Log(int line, const char* func,const char* file,
+  static void Info(int line, const char* func,const char* file,
       const char* message_format, ...);
   /**
    * Does the same as log( ), but adds error prefix.

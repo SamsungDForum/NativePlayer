@@ -10,9 +10,9 @@
 var logs;
 var logs_level;
 if (typeof logs_level === "undefined") {
-  logs_level = "log";
+  logs_level = "info";
 }
-var kLogPrefix = "LOG:";
+var kInfoPrefix = "INFO:";
 var kErrorPrefix = "ERROR:";
 var kDebugPrefix = "DEBUG:";
 
@@ -32,17 +32,22 @@ function startsWith(s, prefix) {
 
 /**
  * Print message in the logs area if it has a specific prefix (defined in
- * kLogPrefix or kErrorPrefix).
+ * kInfoPrefix or kErrorPrefix).
  * @param message - a string message
  * @returns true - if this message was a log or error message.
  */
 function printIfLog(message) {
   if ((typeof message == "string") && (uses_logging == true) &&
-          (startsWith(message, kLogPrefix) || startsWith(message, kErrorPrefix)
+          (startsWith(message, kInfoPrefix) || startsWith(message, kErrorPrefix)
            || startsWith(message, kDebugPrefix))) {
     console.log(message);
-    logs.value += message;
-    logs.scrollTop = logs.scrollHeight;
+    if (startsWith(message, kErrorPrefix))
+      logs.innerHTML += '<font color="red">' + message + '</font>';
+    else if (startsWith(message, kDebugPrefix))
+      logs.innerHTML += '<font color="grey">' + message + '</font>';
+    else
+      logs.innerHTML += message;
+    logs.innerHTML += '<br>'
     return true;
   }
   return false;

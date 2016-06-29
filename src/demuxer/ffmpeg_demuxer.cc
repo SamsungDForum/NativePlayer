@@ -146,11 +146,11 @@ bool FFMpegDemuxer::Init(const InitCallback& callback,
   format_context_->flags |= AVFMT_FLAG_CUSTOM_IO;
   format_context_->pb = io_context_;
 
-  LOG("ffmpeg probe size: %u", probe_size_);
-  LOG("ffmpeg analyze duration: %d", format_context_->max_analyze_duration);
-  LOG("done, format_context: %p, io_context: %p", format_context_, io_context_);
+  LOG_INFO("ffmpeg probe size: %u", probe_size_);
+  LOG_INFO("ffmpeg analyze duration: %d", format_context_->max_analyze_duration);
+  LOG_INFO("done, format_context: %p, io_context: %p", format_context_, io_context_);
 
-  LOG("Initialized");
+  LOG_INFO("Initialized");
   parser_thread_.Start();
   DispatchCallback(kInitialized);
 
@@ -218,7 +218,7 @@ bool FFMpegDemuxer::SetDRMInitDataListener(const DrmInitCallback& callback) {
 }
 
 void FFMpegDemuxer::SetTimestamp(TimeTicks timestamp) {
-  LOG("cuurent timestamp: %f, new: %f", timestamp_, timestamp);
+  LOG_INFO("cuurent timestamp: %f, new: %f", timestamp_, timestamp);
   timestamp_ = timestamp;
 }
 
@@ -354,7 +354,7 @@ int FFMpegDemuxer::Read(uint8_t* data, int size) {
 void FFMpegDemuxer::InitFFmpeg() {
   static bool is_initialized = false;
   if (!is_initialized) {
-    LOG("avcodec_register_all() - start");
+    LOG_INFO("avcodec_register_all() - start");
     av_register_all();
     is_initialized = true;
   }

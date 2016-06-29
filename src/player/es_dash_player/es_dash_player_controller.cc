@@ -46,7 +46,7 @@ const int64_t kMainLoopDelay = 50;  // in milliseconds
 void EsDashPlayerController::InitPlayer(const std::string& mpd_file_path,
                                         const std::string& subtitle,
                                         const std::string& encoding) {
-  LOG("Loading media from : [%s]", mpd_file_path.c_str());
+  LOG_INFO("Loading media from : [%s]", mpd_file_path.c_str());
   CleanPlayer();
 
   player_ = make_shared<MediaPlayer>();
@@ -80,7 +80,7 @@ void EsDashPlayerController::InitializeSubtitles(const std::string& subtitle,
       make_shared<SubtitleListener>(message_sender_);
 
   player_->SetSubtitleListener(listeners_.subtitle_listener);
-  LOG("Result of adding subtitles: %d path: %s, encoding: %s", ret,
+  LOG_INFO("Result of adding subtitles: %d path: %s, encoding: %s", ret,
       subtitle.c_str(), encoding.c_str());
 }
 
@@ -100,7 +100,7 @@ void EsDashPlayerController::InitializeDash(
 
   auto es_data_source = std::make_shared<ESDataSource>();
   TimeTicks duration = ParseDurationToSeconds(dash_parser_->GetDuration());
-  LOG("Duration from the manifest file: '%s', parsed: %f [s]",
+  LOG_INFO("Duration from the manifest file: '%s', parsed: %f [s]",
       dash_parser_->GetDuration().c_str(), duration);
   if (duration != kInvalidDuration) {
     es_data_source->SetDuration(duration);
@@ -131,7 +131,7 @@ void EsDashPlayerController::InitializeVideoStream(
     Samsung::NaClPlayer::DRMType drm_type) {
   if (video_representations_.empty()) return;
 
-  LOG("Video reps count: %d", video_representations_.size());
+  LOG_INFO("Video reps count: %d", video_representations_.size());
   VideoStream s = GetHighestBitrateStream(video_representations_);
   message_sender_->SetRepresentations(video_representations_);
   message_sender_->ChangeRepresentation(StreamType::Video,
@@ -140,7 +140,7 @@ void EsDashPlayerController::InitializeVideoStream(
             s.height, s.description.bitrate, s.description.id);
 
   if (s.description.content_protection) {  // DRM content detected
-    LOG("DRM content detected.");
+    LOG_INFO("DRM content detected.");
     auto drm_listener = make_shared<DrmPlayReadyListener>(instance_, player_);
 
     drm_listener->SetContentProtectionDescriptor(
@@ -170,7 +170,7 @@ void EsDashPlayerController::InitializeAudioStream(
     Samsung::NaClPlayer::DRMType drm_type) {
   if (audio_representations_.empty()) return;
 
-  LOG("Audio reps count: %d", audio_representations_.size());
+  LOG_INFO("Audio reps count: %d", audio_representations_.size());
   AudioStream s = GetHighestBitrateStream(audio_representations_);
   message_sender_->SetRepresentations(audio_representations_);
   message_sender_->ChangeRepresentation(StreamType::Audio,
@@ -179,7 +179,7 @@ void EsDashPlayerController::InitializeAudioStream(
             s.description.bitrate, s.description.id);
 
   if (s.description.content_protection) {  // DRM content detected
-    LOG("DRM content detected.");
+    LOG_INFO("DRM content detected.");
     auto drm_listener = make_shared<DrmPlayReadyListener>(instance_, player_);
 
     drm_listener->SetContentProtectionDescriptor(
@@ -207,13 +207,13 @@ void EsDashPlayerController::InitializeAudioStream(
 
 void EsDashPlayerController::Play() {
   if (!player_) {
-    LOG("Play. player_ is null");
+    LOG_INFO("Play. player_ is null");
     return;
   }
 
   int32_t ret = player_->Play();
   if (ret == ErrorCodes::Success) {
-    LOG("Play called successfully");
+    LOG_INFO("Play called successfully");
   } else {
     LOG_ERROR("Play call failed, code: %d", ret);
   }
@@ -221,20 +221,20 @@ void EsDashPlayerController::Play() {
 
 void EsDashPlayerController::Pause() {
   if (!player_) {
-    LOG("Pause. player_ is null");
+    LOG_INFO("Pause. player_ is null");
     return;
   }
 
   int32_t ret = player_->Pause();
   if (ret == ErrorCodes::Success) {
-    LOG("Pause called successfully");
+    LOG_INFO("Pause called successfully");
   } else {
     LOG_ERROR("Pause call failed, code: %d", ret);
   }
 }
 
 void EsDashPlayerController::CleanPlayer() {
-  LOG("Cleaning player.");
+  LOG_INFO("Cleaning player.");
   if (player_) return;
   player_thread_.reset();
   data_source_.reset();
@@ -243,11 +243,11 @@ void EsDashPlayerController::CleanPlayer() {
   state_ = PlayerState::kUnitialized;
   video_representations_.clear();
   audio_representations_.clear();
-  LOG("Finished closing.");
+  LOG_INFO("Finished closing.");
 }
 
 void EsDashPlayerController::Seek(TimeTicks to_time) {
-  LOG("Seek to %f", to_time);
+  LOG_INFO("Seek to %f", to_time);
   auto callback = WeakBind(&EsDashPlayerController::OnSeek,
       std::static_pointer_cast<EsDashPlayerController>(
           shared_from_this()), _1);
@@ -260,13 +260,13 @@ void EsDashPlayerController::Seek(TimeTicks to_time) {
 void EsDashPlayerController::OnSeek(int32_t ret) {
   TimeTicks current_playback_time = 0.0;
   player_->GetCurrentTime(current_playback_time);
-  LOG("After seek time: %f, result: %d", current_playback_time, ret);
+  LOG_INFO("After seek time: %f, result: %d", current_playback_time, ret);
   message_sender_->BufferingCompleted();
 }
 
 void EsDashPlayerController::ChangeRepresentation(StreamType stream_type,
                                                   int32_t id) {
-  LOG("Changing rep type: %d to id: %d", stream_type, id);
+  LOG_INFO("Changing rep type: %d to id: %d", stream_type, id);
   player_thread_->message_loop().PostWork(cc_factory_.NewCallback(
       &EsDashPlayerController::OnChangeRepresentation, stream_type, id));
 }
@@ -305,7 +305,7 @@ void EsDashPlayerController::UpdateStreamsBuffer(int32_t) {
   if (buffered_time == kEndOfStream) {  // all streams reached end of stream.
     int32_t ret = data_source_->SetEndOfStream();
     if (ret == ErrorCodes::Success)
-      LOG("End of stream signalized from all streams, set EOS - OK");
+      LOG_INFO("End of stream signalized from all streams, set EOS - OK");
     else
       LOG_ERROR("Failed to signalize end of stream to ESDataSource");
     return;
@@ -335,7 +335,7 @@ void EsDashPlayerController::SetViewRect(const Rect& view_rect) {
 void EsDashPlayerController::PostTextTrackInfo() {
   int32_t ret = player_->GetTextTracksList(text_track_list_);
   if (ret == ErrorCodes::Success) {
-    LOG("GetTextTrackInfo called successfully");
+    LOG_INFO("GetTextTrackInfo called successfully");
     message_sender_->SetTextTracks(text_track_list_);
   } else {
     LOG_ERROR("GetTextTrackInfo call failed, code: %d", ret);
@@ -343,7 +343,7 @@ void EsDashPlayerController::PostTextTrackInfo() {
 }
 
 void EsDashPlayerController::ChangeSubtitles(int32_t id) {
-  LOG("Change subtitle to %d", id);
+  LOG_INFO("Change subtitle to %d", id);
   player_thread_->message_loop().PostWork(
       cc_factory_.NewCallback(
           &EsDashPlayerController::OnChangeSubtitles, id));
@@ -351,7 +351,7 @@ void EsDashPlayerController::ChangeSubtitles(int32_t id) {
 
 void EsDashPlayerController::ChangeSubtitleVisibility() {
   subtitles_visible_ = !subtitles_visible_;
-  LOG("Change subtitle visibility to %d", subtitles_visible_);
+  LOG_INFO("Change subtitle visibility to %d", subtitles_visible_);
   player_thread_->message_loop().PostWork(
       cc_factory_.NewCallback(
           &EsDashPlayerController::OnChangeSubVisibility,
@@ -379,7 +379,7 @@ void EsDashPlayerController::OnStreamConfigured(StreamType type) {
 }
 
 void EsDashPlayerController::FinishStreamConfiguration() {
-  LOG("All streams configured, attaching data source.");
+  LOG_INFO("All streams configured, attaching data source.");
   // Audio and video stream should be initialized already.
   if (!player_) {
     LOG_DEBUG("player_ is null!, quit function");
@@ -389,7 +389,7 @@ void EsDashPlayerController::FinishStreamConfiguration() {
 
   if (result == ErrorCodes::Success && state_ != PlayerState::kError) {
     state_ = PlayerState::kReady;
-    LOG("Data Source attached");
+    LOG_INFO("Data Source attached");
   } else {
     state_ = PlayerState::kError;
     LOG_ERROR("Failed to AttachDataSource!");
@@ -404,7 +404,7 @@ void EsDashPlayerController::OnChangeSubtitles(int32_t, int32_t id) {
   int32_t ret = player_->SelectTrack(
       Samsung::NaClPlayer::ElementaryStreamType_Text, id);
   if (ret == ErrorCodes::Success) {
-    LOG("SelectTrack called successfully");
+    LOG_INFO("SelectTrack called successfully");
   } else {
     LOG_ERROR("SelectTrack call failed, code: %d", ret);
   }

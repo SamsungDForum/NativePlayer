@@ -22,7 +22,7 @@ namespace Communication {
 
 void MessageReceiver::HandleMessage(pp::InstanceHandle /*instance*/,
                                       const Var& message_data) {
-  LOG("MessageHandler - HandleMessage");
+  LOG_INFO("MessageHandler - HandleMessage");
   if (!message_data.is_dictionary()) {
     LOG_ERROR("Not supported message format.");
     if (message_data.is_string())
@@ -36,7 +36,7 @@ void MessageReceiver::HandleMessage(pp::InstanceHandle /*instance*/,
     LOG_ERROR("Invalid message - 'action' should be an integer!");
     return;
   }
-  LOG("Action type: %d", action_var.AsInt());
+  LOG_INFO("Action type: %d", action_var.AsInt());
   auto action = static_cast<MessageToPlayer>(action_var.AsInt());
 
   switch (action) {
