@@ -26,16 +26,11 @@ function keyMenuHandler(e) {
   case TvKeyEnum.kKeyUp:
     changeSub(kPrevious);
     break;
+  // Handling RETURN key for NaCl Tester
   case TvKeyEnum.kKeyReturn:
-    if (window.parent) {
+    if (window.parent.document.NACL_TESTER_VERSION != undefined) {
       e.preventDefault();
-      window.blur();
-      window.parent.focus();
-      if (window.parent.is_widget_in_fullscreen) {
-        var element = window.parent.document.getElementById("pass_fail_div");
-        element.style.display = 'block';
-        window.parent.typeMouseUpFullscreen();
-      }
+      window.parent.toggleMenu();
     }
     break;
   }
