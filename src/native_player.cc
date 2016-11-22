@@ -22,7 +22,7 @@ const char* kLogDebug = "debug";
 NativePlayer::~NativePlayer() { UnregisterMessageHandler(); }
 
 void NativePlayer::DidChangeView(const pp::View& view) {
-  const pp::Rect& pp_r = view.GetRect();
+  const pp::Rect pp_r{view.GetRect().size()};
   if (rect_ == pp_r) return;
 
   rect_ = pp_r;
