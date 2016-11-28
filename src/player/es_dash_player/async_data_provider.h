@@ -13,6 +13,7 @@
 #include <memory>
 #include <vector>
 
+#include "nacl_player/common.h"
 #include "ppapi/cpp/message_loop.h"
 #include "ppapi/utility/completion_callback_factory.h"
 #include "ppapi/utility/threading/lock.h"
@@ -34,12 +35,26 @@ class AsyncDataProvider {
 
   bool SetNextSegmentToTime(double time);
 
-  void SetMediaSegmentSequence(std::unique_ptr<MediaSegmentSequence> sequence);
+  // Gets a time of a keyframe closest to a given time. The time must be
+  // between 0 and clip duration.
+  Samsung::NaClPlayer::TimeTicks GetClosestKeyframeTime(
+      Samsung::NaClPlayer::TimeTicks);
+
+  void SetMediaSegmentSequence(std::unique_ptr<MediaSegmentSequence> sequence,
+                               double time = 0.);
 
   double AverageSegmentDuration();
 
   /// Needs to be called on non-main thread.
   bool GetInitSegment(std::vector<uint8_t>* buffer);
+
+  Samsung::NaClPlayer::TimeTicks CurrentSegmentTimestamp() {
+    return next_segment_iterator_.SegmentTimestamp(sequence_.get());
+  }
+
+  Samsung::NaClPlayer::TimeTicks CurrentSegmentDuration() {
+    return next_segment_iterator_.SegmentDuration(sequence_.get());
+  }
 
  private:
   void DownloadNextSegmentOnOwnThread(

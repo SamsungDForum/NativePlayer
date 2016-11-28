@@ -129,7 +129,10 @@ bool DownloadSegment(dash::mpd::ISegment* seg, std::vector<uint8_t>* data) {
   int bytes_read = 0;
   do {
     bytes_read = seg->Read(buf, kBufSize);
-    if (bytes_read > 0) data->insert(data->end(), buf, buf + bytes_read);
+    if (bytes_read > 0)
+      data->insert(data->end(), buf, buf + bytes_read);
+    else if (bytes_read < 0)
+      return false;
   } while (bytes_read > 0);
 
   return true;

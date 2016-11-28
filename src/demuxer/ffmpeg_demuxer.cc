@@ -263,8 +263,9 @@ void FFMpegDemuxer::StartParsing(int32_t) {
       } else {  // Not handled error.
         char errbuff[kErrorBufferSize];
         int32_t strerror_ret = av_strerror(ret, errbuff, kErrorBufferSize);
-        LOG_ERROR("av_read_frame error: %d [%s], av_strerror ret: %d", ret,
-                  errbuff, strerror_ret);
+        LOG_ERROR("%s av_read_frame error: %d [%s], av_strerror ret: %d",
+                  stream_type_ == StreamDemuxer::kVideo ? "VIDEO" : "AUDIO",
+                  ret, errbuff, strerror_ret);
         break;
       }
     } else {

@@ -18,6 +18,7 @@
 
 #include "player/es_dash_player/es_dash_player_controller.h"
 
+#include "demuxer/elementary_stream_packet.h"
 #include "dash/dash_manifest.h"
 #include "dash/util.h"
 
@@ -152,13 +153,21 @@ void EsDashPlayerController::InitializeVideoStream(
 
   auto& stream_manager = streams_[static_cast<int32_t>(StreamType::Video)];
   stream_manager = make_shared<StreamManager>(instance_, StreamType::Video);
-  auto callback = WeakBind(&EsDashPlayerController::OnStreamConfigured,
+  auto configured_callback = WeakBind(
+      &EsDashPlayerController::OnStreamConfigured,
       std::static_pointer_cast<EsDashPlayerController>(
           shared_from_this()), _1);
+  // We bravely capture this because we are bound to outlive stream_manager.
+  auto es_packet_callback = [this](StreamDemuxer::Message message,
+      std::unique_ptr<ElementaryStreamPacket> packet) {
+    packets_manager_.OnEsPacket(message, std::move(packet));
+  };
 
   bool success = stream_manager->Initialize(
       dash_parser_->GetVideoSequence(s.description.id),
-      data_source_, callback, drm_type);
+      data_source_, configured_callback, es_packet_callback, &packets_manager_,
+      drm_type);
+  packets_manager_.SetStream(StreamType::Video, stream_manager);
 
   if (!success) {
     LOG_ERROR("Failed to initialize video stream manager");
@@ -191,13 +200,21 @@ void EsDashPlayerController::InitializeAudioStream(
 
   auto& stream_manager = streams_[static_cast<int32_t>(StreamType::Audio)];
   stream_manager = make_shared<StreamManager>(instance_, StreamType::Audio);
-  auto callback = WeakBind(&EsDashPlayerController::OnStreamConfigured,
+  auto configured_callback = WeakBind(
+      &EsDashPlayerController::OnStreamConfigured,
       std::static_pointer_cast<EsDashPlayerController>(
           shared_from_this()), _1);
+  // We bravely capture this because we are bound to outlive stream_manager.
+  auto es_packet_callback = [this](StreamDemuxer::Message message,
+      std::unique_ptr<ElementaryStreamPacket> packet) {
+    packets_manager_.OnEsPacket(message, std::move(packet));
+  };
 
   bool success = stream_manager->Initialize(
       dash_parser_->GetAudioSequence(s.description.id),
-      data_source_, callback, drm_type);
+      data_source_, configured_callback, es_packet_callback,
+      &packets_manager_, drm_type);
+  packets_manager_.SetStream(StreamType::Audio, stream_manager);
 
   if (!success) {
     LOG_ERROR("Failed to initialize audio stream manager");
@@ -246,11 +263,23 @@ void EsDashPlayerController::CleanPlayer() {
   LOG_INFO("Finished closing.");
 }
 
-void EsDashPlayerController::Seek(TimeTicks to_time) {
-  LOG_INFO("Seek to %f", to_time);
+void EsDashPlayerController::Seek(TimeTicks original_time) {
+  auto to_time = streams_[static_cast<int>(StreamType::Video)]
+      ->GetClosestKeyframeTime(original_time);
+  LOG_INFO("Requested seek to %f [s], adjusted time to keyframe at %f [s]",
+           original_time, to_time);
+
+  for (auto stream : streams_) {
+    if (stream)
+      stream->PrepareForSeek(to_time);
+  }
+
+  packets_manager_.PrepareForSeek(to_time);
+
   auto callback = WeakBind(&EsDashPlayerController::OnSeek,
       std::static_pointer_cast<EsDashPlayerController>(
           shared_from_this()), _1);
+
   int32_t ret = player_->Seek(to_time, callback);
   if (ret < ErrorCodes::CompletionPending) {
     LOG_ERROR("Seek call failed, code: %d", ret);
@@ -258,9 +287,13 @@ void EsDashPlayerController::Seek(TimeTicks to_time) {
 }
 
 void EsDashPlayerController::OnSeek(int32_t ret) {
-  TimeTicks current_playback_time = 0.0;
-  player_->GetCurrentTime(current_playback_time);
-  LOG_INFO("After seek time: %f, result: %d", current_playback_time, ret);
+  if (ret == PP_OK) {
+    TimeTicks current_playback_time = 0.0;
+    player_->GetCurrentTime(current_playback_time);
+    LOG_INFO("After seek, time: %f, result: %d", current_playback_time, ret);
+  } else {
+    LOG_ERROR("Seek failed with code: %d", ret);
+  }
   message_sender_->BufferingCompleted();
 }
 
@@ -280,10 +313,7 @@ void EsDashPlayerController::OnChangeRepresentation(int32_t, StreamType type,
 }
 
 void EsDashPlayerController::UpdateStreamsBuffer(int32_t) {
-  LOG_DEBUG("");
   TimeTicks current_playback_time = 0.0;
-  TimeTicks buffered_time = kEndOfStream;  // a lower value of audio buffered
-  // time and video buffered time
 
   if (!player_) {
     LOG_DEBUG("player_ is null!, quit function");
@@ -291,18 +321,21 @@ void EsDashPlayerController::UpdateStreamsBuffer(int32_t) {
   }
 
   player_->GetCurrentTime(current_playback_time);
-  LOG_DEBUG("Current time: %f[s]", current_playback_time);
+  LOG_DEBUG("Current time: %f [s]", current_playback_time);
+
+  bool segments_pending = false;
+
   for (auto stream : streams_) {
     if (stream) {
-      TimeTicks stream_buffered_time =
-          stream->UpdateBuffer(current_playback_time);
-      if (stream_buffered_time < buffered_time) {
-        buffered_time = stream_buffered_time;
-      }
+        segments_pending |= stream->UpdateBuffer(current_playback_time);
     }
   }
 
-  if (buffered_time == kEndOfStream) {  // all streams reached end of stream.
+  bool has_buffered_packets = packets_manager_.UpdateBuffer(
+      current_playback_time);
+
+  // All streams reached EOS:
+  if (!segments_pending && !has_buffered_packets) {
     int32_t ret = data_source_->SetEndOfStream();
     if (ret == ErrorCodes::Success)
       LOG_INFO("End of stream signalized from all streams, set EOS - OK");

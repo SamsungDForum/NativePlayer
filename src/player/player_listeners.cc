@@ -34,7 +34,7 @@ void MediaPlayerListener::OnEnded() {
 }
 
 void MediaPlayerListener::OnError(MediaPlayerError error) {
-  LOG_INFO("Event: Error occurred. Error no: %d.", error);
+  LOG_ERROR("Event: Error occurred. Error no: %d.", error);
 }
 
 void MediaBufferingListener::OnBufferingStart() {

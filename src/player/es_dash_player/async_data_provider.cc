@@ -8,6 +8,7 @@
 
 #include "async_data_provider.h"
 
+#include <cmath>
 #include "libdash/libdash.h"
 
 #include "common.h"
@@ -77,11 +78,35 @@ bool AsyncDataProvider::SetNextSegmentToTime(double time) {
   return true;
 }
 
+Samsung::NaClPlayer::TimeTicks AsyncDataProvider::GetClosestKeyframeTime(
+    Samsung::NaClPlayer::TimeTicks time) {
+  constexpr Samsung::NaClPlayer::TimeTicks kSeekMargin = 0.1;
+  auto segment = sequence_->MediaSegmentForTime(time);
+  if (segment == sequence_->End())
+    return 0.;
+  // Calculates a next segment:
+  auto next_segment = segment;
+  ++next_segment;
+  bool has_next_segment = (next_segment != sequence_->End());
+  // Calculates a closest keyframe time:
+  auto segment_start = segment.SegmentTimestamp(sequence_.get());
+  if (!has_next_segment)
+    return segment_start;
+  auto next_segment_start = next_segment.SegmentTimestamp(sequence_.get());
+  if (time - segment_start < next_segment_start - time)
+    return segment_start + kSeekMargin;
+  return next_segment_start + kSeekMargin;
+}
+
 void AsyncDataProvider::SetMediaSegmentSequence(
-    std::unique_ptr<MediaSegmentSequence> sequence) {
+    std::unique_ptr<MediaSegmentSequence> sequence, double time) {
   AutoLock lock(iterator_lock_);
   sequence_ = std::move(sequence);
-  next_segment_iterator_ = sequence_->Begin();
+  if (fabs(time) < kEps) {
+    next_segment_iterator_ = sequence_->Begin();
+  } else {
+    next_segment_iterator_ = sequence_->MediaSegmentForTime(time);
+  }
 }
 
 double AsyncDataProvider::AverageSegmentDuration() {
@@ -98,20 +123,28 @@ bool AsyncDataProvider::GetInitSegment(std::vector<uint8_t>* buffer) {
 void AsyncDataProvider::DownloadNextSegmentOnOwnThread(
     int32_t, MediaSegmentSequence::Iterator segment_iterator,
     MessageLoop destination_message_loop) {
-  LOG_DEBUG("");
+  auto segment_duration = sequence_->SegmentDuration(segment_iterator);
+  auto segment_timestamp = sequence_->SegmentTimestamp(segment_iterator);
+  LOG_INFO("Starting download for a segment: %f [s] ... %f [s]",
+      segment_timestamp, segment_timestamp + segment_duration);
   auto seg = MakeUnique<MediaSegment>();
 
   // arbitrary additional buffer space if segments size varies a little
   seg->data_.reserve(last_segment_size_ + last_segment_size_ / 32);
-  seg->duration_ = sequence_->SegmentDuration(segment_iterator);
-  seg->timestamp_ = sequence_->SegmentTimestamp(segment_iterator);
+  seg->duration_ = segment_duration;
+  seg->timestamp_ = segment_timestamp;
 
-  DownloadSegment(*segment_iterator, &(seg->data_));
+  if (!DownloadSegment(*segment_iterator, &(seg->data_))) {
+    LOG_INFO("Download of a segment: %f [s] ... %f [s] was interrupted.",
+        segment_timestamp, segment_timestamp + segment_duration);
+    return;
+  }
   last_segment_size_ = seg->data_.size();
 
   destination_message_loop.PostWork(cc_factory_.NewCallback(
       &AsyncDataProvider::PassResultOnCallerThread, seg.release()));
-  LOG_DEBUG("Finishing");
+  LOG_INFO("Finished download of a segment: %f [s] ... %f [s]",
+      segment_timestamp, segment_timestamp + segment_duration);
 }
 
 void AsyncDataProvider::PassResultOnCallerThread(int32_t,

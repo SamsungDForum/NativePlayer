@@ -23,6 +23,11 @@
 #include "ppapi/cpp/instance.h"
 
 #include "dash/media_segment_sequence.h"
+#include "player/es_dash_player/packets_manager.h"
+#include "demuxer/stream_demuxer.h"
+
+class ElementaryStreamPacket;
+class StreamListener;
 
 /// @file
 /// @brief This file defines the <code>StreamManager</code> class.
@@ -53,6 +58,12 @@
 /// one particular representation of the stream, which is associated with the
 /// used <code>MediaSegmentSequence</code> object. However, the representation
 /// (media segment sequence) can be changed.
+///
+/// Sending <code>ElementaryStreamPacket</code>s to NaCl Player should be
+/// synchronized when packets originate from multiple strams.
+/// <code>StreamManager</code> does not send packets directly to NaCl Player,
+/// but sends them to <code>EsPacketManager</code> which assures streams
+/// synchronization.
 ///
 /// @see class <code>MediaSegmentSequence</code>
 /// @see class <code>StreamDemuxer</code>
@@ -95,6 +106,8 @@ class StreamManager : public Samsung::NaClPlayer::ElementaryStreamListener,
   /// @param[in] stream_configured_callback A callback which will be called
   ///   whenever a new stream configuration is discovered and successfully
   ///   applied to NaCl Player.
+  /// @param[in] packets_manager A class that will perform synchronization of
+  ///   <code>ElementaryStreamPacket</code>s outputted from this stream.
   /// @param[in] drm_type A DRM scheme used by the managed stream. If no DRM
   ///   is in use, use <code>Samsung::NaClPlayer::DRMType_Unknown</code>.
   ///
@@ -104,6 +117,9 @@ class StreamManager : public Samsung::NaClPlayer::ElementaryStreamListener,
       std::unique_ptr<MediaSegmentSequence> segment_sequence,
       std::shared_ptr<Samsung::NaClPlayer::ESDataSource> es_data_source,
       std::function<void(StreamType)> stream_configured_callback,
+      std::function<void(StreamDemuxer::Message, std::unique_ptr<
+          ElementaryStreamPacket>)> es_packet_callback,
+      StreamListener* stream_listener,
       Samsung::NaClPlayer::DRMType drm_type =
           Samsung::NaClPlayer::DRMType_Unknown);
 
@@ -121,16 +137,14 @@ class StreamManager : public Samsung::NaClPlayer::ElementaryStreamListener,
 
   /// Checks if there is enough data buffered for this stream and initiates
   /// data download and parsing if there is not enough buffered elementary
-  /// stream packets. Additionally, this method sends elementary stream packets
-  /// to NaCl Player for a playback.
+  /// stream packets.
   ///
   /// UpdateBuffer() should be called periodically to keep playback going.
   ///
   /// @param[in] playback_time A current playback time.
   ///
-  /// @return A PTS (presentation timestamp) value of the last buffered packet.
-  Samsung::NaClPlayer::TimeTicks UpdateBuffer(
-      Samsung::NaClPlayer::TimeTicks playback_time);
+  /// @return Indicates whether there are more segments to download or not.
+  bool UpdateBuffer(Samsung::NaClPlayer::TimeTicks playback_time);
 
   /// Checks if this <code>StreamManager</code> was initialized, i.e.
   /// <code>Initialize()</code> was successfully called on this object before
@@ -139,6 +153,27 @@ class StreamManager : public Samsung::NaClPlayer::ElementaryStreamListener,
   /// @return A <code>true</code> value if this <code>StreamManager</code> is
   ///   in a proper and useable state, or a <code>false</code> otherwise.
   bool IsInitialized();
+
+  bool IsSeeking() const;
+
+  /// Prepares this <code>StreamManager</code> for a seek operation. This
+  /// stops the manager from downloading media segments from an old playback
+  /// position and initiates download of media segments starting at a
+  /// <code>new_position</code>. Additionally appending elementary stream
+  /// packets to an underlying NaCl Player will be stopped until
+  /// <code>OnSeekData()</code> event occurs.
+  ///
+  /// @param[in] new_position A new playback position.
+  void PrepareForSeek(Samsung::NaClPlayer::TimeTicks new_position);
+
+  bool AppendPacket(std::unique_ptr<ElementaryStreamPacket>);
+
+  void SetSegmentToTime(Samsung::NaClPlayer::TimeTicks time,
+      Samsung::NaClPlayer::TimeTicks* timestamp,
+      Samsung::NaClPlayer::TimeTicks* duration);
+
+  Samsung::NaClPlayer::TimeTicks GetClosestKeyframeTime(
+      Samsung::NaClPlayer::TimeTicks);
 
  private:
   void OnNeedData(int32_t bytes_max) override;

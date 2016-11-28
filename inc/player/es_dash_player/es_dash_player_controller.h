@@ -24,6 +24,7 @@
 
 #include "common.h"
 #include "dash/dash_manifest.h"
+#include "player/es_dash_player/packets_manager.h"
 #include "player/es_dash_player/stream_manager.h"
 #include "player/player_controller.h"
 #include "player/player_listeners.h"
@@ -207,6 +208,7 @@ class EsDashPlayerController : public PlayerController,
   PlayerState state_;
   Samsung::NaClPlayer::Rect view_rect_;
 
+  PacketsManager packets_manager_;
   std::unique_ptr<DashManifest> dash_parser_;
   std::array<std::shared_ptr<StreamManager>,
              static_cast<int32_t>(StreamType::MaxStreamTypes)> streams_;
