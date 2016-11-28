@@ -28,6 +28,8 @@
 #define LOG_ERROR(msg, ...) Logger::Error(LOG_STATS, msg, ##__VA_ARGS__)
 #define LOG_DEBUG(msg, ...) Logger::Debug(LOG_STATS, msg, ##__VA_ARGS__)
 
+constexpr double kEps = 0.0001;
+
 template <typename T, class... Args>
 std::unique_ptr<T> MakeUnique(Args&&... args) {
   return std::unique_ptr<T>(new T(std::forward<Args>(args)...));

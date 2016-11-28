@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include <string>
+#include <libgen.h>
 
 #include "ppapi/cpp/instance.h"
 #include "ppapi/cpp/var.h"
@@ -134,12 +135,13 @@ void Logger::InternalPrint(int line, const char* func, const char* file,
     char buff[kMaxMessageSize];
     std::string log_format = std::string(prefix) + message_format + "\n";
     vsnprintf(buff, kMaxMessageSize, log_format.c_str(), arguments_list);
+    const char* file_basename = basename(const_cast<char*>(file));
     instance_->PostMessage(buff);
     if (prefix == kInfoPrefix)
-      INFO_POINT("[%s/%s:%d] %s", file, func, line, buff);
+      INFO_POINT("[%s/%s:%d] %s", file_basename, func, line, buff);
     else if (prefix == kDebugPrefix)
-      DEBUG_POINT("[%s/%s:%d] %s", file, func, line, buff);
+      DEBUG_POINT("[%s/%s:%d] %s", file_basename, func, line, buff);
     if (prefix == kErrorPrefix)
-      ERROR_POINT("[%s/%s:%d] %s", file, func, line, buff);
+      ERROR_POINT("[%s/%s:%d] %s", file_basename, func, line, buff);
   }
 }

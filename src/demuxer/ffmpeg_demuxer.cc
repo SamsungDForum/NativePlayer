@@ -147,8 +147,10 @@ bool FFMpegDemuxer::Init(const InitCallback& callback,
   format_context_->pb = io_context_;
 
   LOG_INFO("ffmpeg probe size: %u", probe_size_);
-  LOG_INFO("ffmpeg analyze duration: %d", format_context_->max_analyze_duration);
-  LOG_INFO("done, format_context: %p, io_context: %p", format_context_, io_context_);
+  LOG_INFO("ffmpeg analyze duration: %d",
+           format_context_->max_analyze_duration);
+  LOG_INFO("done, format_context: %p, io_context: %p",
+           format_context_, io_context_);
 
   LOG_INFO("Initialized");
   parser_thread_.Start();
@@ -229,7 +231,10 @@ void FFMpegDemuxer::Close() {
 
 void FFMpegDemuxer::StartParsing(int32_t) {
   LOG_DEBUG("parser: %p, parser buffer size: %d", this, buffer_.size());
-  if (!streams_initialized_) InitStreamInfo();
+  if (!streams_initialized_ && !InitStreamInfo()) {
+    LOG_ERROR("Can't initialize demuxer");
+    return;
+  }
 
   AVPacket pkt;
 

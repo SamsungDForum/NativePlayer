@@ -375,21 +375,17 @@ TimeTicks StreamManager::Impl::UpdateBuffer(TimeTicks playback_time) {
 void StreamManager::Impl::SetMediaSegmentSequence(
     std::unique_ptr<MediaSegmentSequence> segment_sequence) {
   LOG_DEBUG("");
-  if (segment_pending_) drop_segment_ = true;
-  data_provider_->SetMediaSegmentSequence(std::move(segment_sequence));
 
-  // if content is protected we need to initialize new parser
-  if (drm_initialized_) {
-    seeking_ = true;
-    drop_segment_ = false;
-    need_time_ = buffered_segments_time_;
-    demuxer_.reset();
-    drm_initialized_ = false;
-    LOG_INFO("Parser reset");
-    if (InitParser()) ParseInitSegment();
-  }
-  data_provider_->SetNextSegmentToTime(
-      buffered_segments_time_ + data_provider_->AverageSegmentDuration());
+  data_provider_->SetMediaSegmentSequence(std::move(segment_sequence));
+  seeking_ = true;
+  drop_segment_ = false;
+  need_time_ = buffered_segments_time_;
+  demuxer_.reset();
+  drm_initialized_ = false;
+  LOG_INFO("Parser reset");
+  if (InitParser()) ParseInitSegment();
+
+  data_provider_->SetNextSegmentToTime(buffered_segments_time_);
 
   LOG_DEBUG("SetMediaSegmentSequence changed segments in data provider");
 }
@@ -398,8 +394,9 @@ void StreamManager::Impl::GotSegment(std::unique_ptr<MediaSegment> segment) {
   LOG_INFO("Got segment: duration: %f, data.size(): %d, timestamp: %f",
       segment->duration_, segment->data_.size(), segment->timestamp_);
   segment_pending_ = false;
-  if (seeking_ && (need_time_ < segment->duration_ + segment->timestamp_) &&
-      (need_time_ >= segment->timestamp_)) {
+  if (seeking_ &&
+      segment->timestamp_ - kEps <= need_time_ &&
+      need_time_ < segment->duration_ + segment->timestamp_) {
     seeking_ = false;
     demuxer_->SetTimestamp(segment->timestamp_);
   } else if (seeking_) {

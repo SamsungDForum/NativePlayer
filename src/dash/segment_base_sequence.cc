@@ -68,7 +68,7 @@ MediaSegmentSequence::Iterator SegmentBaseSequence::MediaSegmentForTime(
     double time) const {
   for (uint32_t i = 0; i < segment_index_.size(); ++i) {
     const SegmentIndexEntry& e = segment_index_[i];
-    if (e.timestamp <= time && time < e.timestamp + e.duration)
+    if (e.timestamp - kEps <= time && time < e.timestamp + e.duration)
       return MakeIterator<SegmentBaseIterator>(this, i);
   }
 

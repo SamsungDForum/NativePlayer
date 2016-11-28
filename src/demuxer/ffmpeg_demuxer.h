@@ -68,8 +68,6 @@ class FFMpegDemuxer : public StreamDemuxer {
       const std::vector<uint8_t>& init_data);
   bool InitStreamInfo();
   static void InitFFmpeg();
-  bool ParseH264SpsPpsFromExtraData(const uint8_t* extra_data,
-                                    const int extra_data_size);
 
   std::unique_ptr<ElementaryStreamPacket> MakeESPacketFromAVPacket(
       AVPacket* pkt);

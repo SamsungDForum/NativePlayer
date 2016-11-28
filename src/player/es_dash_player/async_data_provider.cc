@@ -40,7 +40,7 @@ bool AsyncDataProvider::RequestNextDataSegment() {
   LOG_DEBUG("Requesting next data segment");
   AutoLock lock(iterator_lock_);
   if (next_segment_iterator_ == sequence_->End()) {
-    // Pass an empty MediaSegment as an end of stream signal.
+    LOG_INFO("Pass an empty MediaSegment as an end of stream signal.");
     data_segment_callback_(MakeUnique<MediaSegment>());
     return false;
   }
@@ -69,6 +69,10 @@ bool AsyncDataProvider::SetNextSegmentToTime(double time) {
     return false;
   }
   next_segment_iterator_ = sequence_->MediaSegmentForTime(time);
+  if (next_segment_iterator_ == sequence_->End()) {
+    LOG_ERROR("Can't find segment for time: %f", time);
+    return false;
+  }
 
   return true;
 }
