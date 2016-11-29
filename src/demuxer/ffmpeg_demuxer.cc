@@ -218,7 +218,7 @@ bool FFMpegDemuxer::SetDRMInitDataListener(const DrmInitCallback& callback) {
 }
 
 void FFMpegDemuxer::SetTimestamp(TimeTicks timestamp) {
-  LOG_INFO("cuurent timestamp: %f, new: %f", timestamp_, timestamp);
+  LOG_INFO("current timestamp: %f, new: %f", timestamp_, timestamp);
   timestamp_ = timestamp;
 }
 
@@ -232,11 +232,11 @@ void FFMpegDemuxer::StartParsing(int32_t) {
   if (!streams_initialized_) InitStreamInfo();
 
   AVPacket pkt;
-  av_init_packet(&pkt);
-  pkt.data = NULL;
-  pkt.size = 0;
 
   while (!exited_) {
+    av_init_packet(&pkt);
+    pkt.data = NULL;
+    pkt.size = 0;
     {
       AutoLock critical_section(buffer_lock_);
       // ensure, that very last packets will be read.
@@ -249,17 +249,7 @@ void FFMpegDemuxer::StartParsing(int32_t) {
     }
 
     Message packet_msg;
-    if (pkt.stream_index == audio_stream_idx_) {
-      packet_msg = kAudioPkt;
-    } else if (pkt.stream_index == video_stream_idx_) {
-      packet_msg = kVideoPkt;
-    } else {
-      packet_msg = kError;
-      LOG_DEBUG("Error! Packet stream index (%d) not recognized!",
-                pkt.stream_index);
-    }
     unique_ptr<ElementaryStreamPacket> es_pkt;
-
     int32_t ret = av_read_frame(format_context_, &pkt);
     if (ret < 0) {
       if (ret == AVERROR_EOF) {
@@ -268,12 +258,21 @@ void FFMpegDemuxer::StartParsing(int32_t) {
       } else {  // Not handled error.
         char errbuff[kErrorBufferSize];
         int32_t strerror_ret = av_strerror(ret, errbuff, kErrorBufferSize);
-        LOG_DEBUG("av_read_frame error: %d [%s], av_strerror ret: %d", ret,
+        LOG_ERROR("av_read_frame error: %d [%s], av_strerror ret: %d", ret,
                   errbuff, strerror_ret);
         break;
       }
     } else {
       LOG_DEBUG("parser: %p, got packet with size: %d", this, pkt.size);
+      if (pkt.stream_index == audio_stream_idx_) {
+        packet_msg = kAudioPkt;
+      } else if (pkt.stream_index == video_stream_idx_) {
+        packet_msg = kVideoPkt;
+      } else {
+        packet_msg = kError;
+        LOG_ERROR("Error! Packet stream index (%d) not recognized!",
+                  pkt.stream_index);
+      }
       es_pkt = MakeESPacketFromAVPacket(&pkt);
     }
 
@@ -283,9 +282,6 @@ void FFMpegDemuxer::StartParsing(int32_t) {
         &FFMpegDemuxer::EsPktCallbackInDispatcherThread, es_pkt_callback));
 
     av_free_packet(&pkt);
-    av_init_packet(&pkt);
-    pkt.data = NULL;
-    pkt.size = 0;
   }
 
   LOG_DEBUG("Finished parsing data. buffer left: %d, parser: %p",
