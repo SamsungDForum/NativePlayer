@@ -107,9 +107,10 @@ void EsDashPlayerController::InitializeDash(
     es_data_source->SetDuration(duration);
     message_sender_->SetMediaDuration(duration);
   } else {
-    LOG_DEBUG("Invalid media duration!");
+    LOG_ERROR("Invalid media duration!");
   }
   data_source_ = es_data_source;
+  media_duration_ = duration;
   streams_.fill({});
   video_representations_ = dash_parser_->GetVideoStreams();
   audio_representations_ = dash_parser_->GetAudioStreams();
@@ -264,6 +265,15 @@ void EsDashPlayerController::CleanPlayer() {
 }
 
 void EsDashPlayerController::Seek(TimeTicks original_time) {
+  // Seeking very close to media_duration_ will most likely place us after
+  // last segment. kSegmentMargin is substracted  from media_duration_, which
+  // will pretty reliable place us within the segment.
+  constexpr Samsung::NaClPlayer::TimeTicks kSegmentMargin = 0.25;
+  if (original_time > media_duration_ - kSegmentMargin) {
+    original_time = media_duration_ - kSegmentMargin;
+  } else if (original_time < kEps) {
+    original_time = 0.;
+  }
   auto to_time = streams_[static_cast<int>(StreamType::Video)]
       ->GetClosestKeyframeTime(original_time);
   LOG_INFO("Requested seek to %f [s], adjusted time to keyframe at %f [s]",

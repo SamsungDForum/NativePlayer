@@ -85,6 +85,7 @@ class EsDashPlayerController : public PlayerController,
         instance_(instance),
         cc_factory_(this),
         subtitles_visible_(true),
+        media_duration_(0.),
         message_sender_(message_sender),
         state_(PlayerState::kUnitialized) {}
 
@@ -202,6 +203,7 @@ class EsDashPlayerController : public PlayerController,
   std::unique_ptr<Samsung::NaClPlayer::TextTrackInfo> text_track_;
   std::vector<Samsung::NaClPlayer::TextTrackInfo> text_track_list_;
   bool subtitles_visible_;
+  Samsung::NaClPlayer::TimeTicks media_duration_;
 
   std::shared_ptr<Communication::MessageSender> message_sender_;
 
