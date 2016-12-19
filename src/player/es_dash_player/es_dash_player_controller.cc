@@ -309,7 +309,7 @@ void EsDashPlayerController::OnSeek(int32_t ret) {
 
 void EsDashPlayerController::ChangeRepresentation(StreamType stream_type,
                                                   int32_t id) {
-  LOG_INFO("Changing rep type: %d to id: %d", stream_type, id);
+  LOG_INFO("Changing rep type: %d -> %d", stream_type, id);
   player_thread_->message_loop().PostWork(cc_factory_.NewCallback(
       &EsDashPlayerController::OnChangeRepresentation, stream_type, id));
 }
@@ -345,16 +345,15 @@ void EsDashPlayerController::UpdateStreamsBuffer(int32_t) {
       current_playback_time);
 
   // All streams reached EOS:
-  if (!segments_pending && !has_buffered_packets) {
+  if (!segments_pending && !has_buffered_packets &&
+      packets_manager_.IsEosReached()) {
     int32_t ret = data_source_->SetEndOfStream();
     if (ret == ErrorCodes::Success)
       LOG_INFO("End of stream signalized from all streams, set EOS - OK");
     else
       LOG_ERROR("Failed to signalize end of stream to ESDataSource");
     return;
-  }
-
-  if (player_thread_) {
+  } else if (player_thread_) {
     player_thread_->message_loop().PostWork(
         cc_factory_.NewCallback(&EsDashPlayerController::UpdateStreamsBuffer),
         kMainLoopDelay);

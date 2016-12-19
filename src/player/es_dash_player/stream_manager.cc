@@ -85,6 +85,9 @@ class StreamManager::Impl :
 
   bool AppendPacket(std::unique_ptr<ElementaryStreamPacket>);
 
+  bool SetConfig(const AudioConfig& audio_config);
+  bool SetConfig(const VideoConfig& video_config);
+
   Samsung::NaClPlayer::TimeTicks GetClosestKeyframeTime(
       Samsung::NaClPlayer::TimeTicks);
 
@@ -119,6 +122,7 @@ class StreamManager::Impl :
   bool init_seek_;
   bool initialized_;
   bool seeking_;
+  bool changing_representation_;
   bool segment_pending_;
 
   AudioConfig audio_config_;
@@ -140,6 +144,7 @@ StreamManager::Impl::Impl(pp::InstanceHandle instance, StreamType type)
       init_seek_(false),
       initialized_(false),
       seeking_(false),
+      changing_representation_(false),
       segment_pending_(false),
       drm_type_(Samsung::NaClPlayer::DRMType_Unknown),
       buffered_segments_time_(0.),
@@ -351,7 +356,7 @@ bool StreamManager::Impl::UpdateBuffer(TimeTicks playback_time) {
       if (has_more_segments) {
         segment_pending_ = true;
       } else {
-        LOG_INFO("There are no more segments to load");
+        LOG_DEBUG("There are no more segments to load");
         return false;
       }
     }
@@ -362,36 +367,43 @@ bool StreamManager::Impl::UpdateBuffer(TimeTicks playback_time) {
 
 void StreamManager::Impl::SetMediaSegmentSequence(
     std::unique_ptr<MediaSegmentSequence> segment_sequence) {
-  constexpr Samsung::NaClPlayer::TimeTicks kNextSegmentMargin = 0.1;
   LOG_INFO("Setting new %s sequence to %f [s]",
             stream_type_ == StreamType::Video ? "VIDEO" : "AUDIO",
             buffered_segments_time_);
-  data_provider_->SetMediaSegmentSequence(std::move(segment_sequence),
-      buffered_segments_time_ + kNextSegmentMargin);
-
-  seeking_ = true;
-  need_time_ = buffered_segments_time_;
+  // TODO(p.balut): This is needed only for adjusting a demuxer timestamp in
+  //                GotSegment() and will be redundant after update to ffmpeg
+  //                2.6+.
+  changing_representation_ = true;
+  // TODO(p.balut): Assuring we request next segment should be more reliable
+  //                than just using timestamps (i.e. use segment indices).
+  need_time_ = buffered_segments_time_ + kSegmentMargin;
   demuxer_.reset();
   drm_initialized_ = false;
   LOG_INFO("Parser reset");
+  data_provider_->SetMediaSegmentSequence(std::move(segment_sequence),
+      buffered_segments_time_ + kSegmentMargin);
   if (InitParser()) ParseInitSegment();
 
   LOG_DEBUG("SetMediaSegmentSequence changed segments in data provider");
 }
 
 void StreamManager::Impl::GotSegment(std::unique_ptr<MediaSegment> segment) {
-  LOG_INFO("Got %s segment: duration: %f, data.size(): %d, timestamp: %f [s]",
-      stream_type_ == StreamType::Video ? "VIDEO" : "AUDIO",
-      segment->duration_, segment->data_.size(), segment->timestamp_);
+  if (!segment->data_.empty()) {
+    LOG_INFO("Got %s segment. duration: %f, data size: %d, timestamp: %f [s]",
+        stream_type_ == StreamType::Video ? "VIDEO" : "AUDIO",
+        segment->duration_, segment->data_.size(), segment->timestamp_);
+  }
   segment_pending_ = false;
-  if (seeking_ &&
+  if ((seeking_ || changing_representation_) &&
       segment->timestamp_ - kEps <= need_time_ &&
       need_time_ < segment->duration_ + segment->timestamp_) {
     LOG_INFO("This segment finishes a seek for this stream.");
+    changing_representation_ = false;
     seeking_ = false;
     demuxer_->SetTimestamp(segment->timestamp_);
   } else if (seeking_) {
-    LOG_INFO("This segment is out of bounds and will be dropped.");
+    LOG_INFO("This segment is out of bounds and will be dropped. Expected "
+             "time == %f [s]", need_time_);
     return;
   }
 
@@ -400,10 +412,9 @@ void StreamManager::Impl::GotSegment(std::unique_ptr<MediaSegment> segment) {
   demuxer_->Parse(segment->data_);
 }
 
-void StreamManager::Impl::OnAudioConfig(const AudioConfig& audio_config) {
-  LOG_INFO("OnAudioConfig codec_type: %d!", audio_config.codec_type);
-  LOG_DEBUG(
-      "audio configuration - codec: %d, profile: %d, sample_format: %d,"
+bool StreamManager::Impl::SetConfig(const AudioConfig& audio_config) {
+  LOG_INFO("OnAudioConfig codec_type: %d!\n"
+      "profile: %d, sample_format: %d,"
       " bits_per_channel: %d, channel_layout: %d, samples_per_second: %d",
       audio_config.codec_type, audio_config.codec_profile,
       audio_config.sample_format, audio_config.bits_per_channel,
@@ -411,7 +422,7 @@ void StreamManager::Impl::OnAudioConfig(const AudioConfig& audio_config) {
 
   if (audio_config_ == audio_config) {
     LOG_INFO("The same config as before");
-    return;
+    return true;
   }
 
   audio_config_ = audio_config;
@@ -433,15 +444,16 @@ void StreamManager::Impl::OnAudioConfig(const AudioConfig& audio_config) {
     if (ret == ErrorCodes::Success && !initialized_) {
       initialized_ = true;
       stream_configured_callback_(stream_type_);
+      return true;
     }
   } else {
-    LOG_DEBUG("Check this - there should be no other than audio stream");
+    LOG_ERROR("This is not an audio stream manager!");
   }
+  return false;
 }
 
-void StreamManager::Impl::OnVideoConfig(const VideoConfig& video_config) {
-  LOG_INFO("OnVideoConfig codec_type: %d!", video_config.codec_type);
-  LOG_DEBUG(
+bool StreamManager::Impl::SetConfig(const VideoConfig& video_config) {
+  LOG_INFO("OnVideoConfig codec_type: %d!\n"
       "video configuration - codec: %d, profile: %d, frame: %d "
       "visible_rect: %d %d ",
       video_config.codec_type, video_config.codec_profile,
@@ -449,7 +461,7 @@ void StreamManager::Impl::OnVideoConfig(const VideoConfig& video_config) {
       video_config.size.height);
   if (video_config_ == video_config) {
     LOG_INFO("The same config as before");
-    return;
+    return true;
   }
 
   video_config_ = video_config;
@@ -470,10 +482,20 @@ void StreamManager::Impl::OnVideoConfig(const VideoConfig& video_config) {
     if (ret == ErrorCodes::Success && !initialized_) {
       initialized_ = true;
       stream_configured_callback_(stream_type_);
+      return true;
     }
   } else {
-    LOG_DEBUG("Check this - there should be no other than video stream");
+    LOG_ERROR("This is not a video stream manager!");
   }
+  return false;
+}
+
+void StreamManager::Impl::OnAudioConfig(const AudioConfig& audio_config) {
+  stream_listener_->OnStreamConfig(audio_config);
+}
+
+void StreamManager::Impl::OnVideoConfig(const VideoConfig& video_config) {
+  stream_listener_->OnStreamConfig(video_config);
 }
 
 void StreamManager::Impl::OnDRMInitData(const std::string& type,
@@ -528,7 +550,12 @@ bool StreamManager::AppendPacket(
     std::unique_ptr<ElementaryStreamPacket> packet) {
   return pimpl_->AppendPacket(std::move(packet));
 }
-
+bool StreamManager::SetConfig(const AudioConfig& audio_config) {
+  return pimpl_->SetConfig(audio_config);
+}
+bool StreamManager::SetConfig(const VideoConfig& video_config) {
+  return pimpl_->SetConfig(video_config);
+}
 Samsung::NaClPlayer::TimeTicks StreamManager::GetClosestKeyframeTime(
     Samsung::NaClPlayer::TimeTicks time) {
   return pimpl_->GetClosestKeyframeTime(time);

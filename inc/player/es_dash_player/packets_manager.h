@@ -45,23 +45,67 @@ class PacketsManager : public StreamListener {
   bool UpdateBuffer(Samsung::NaClPlayer::TimeTicks playback_time);
   void SetStream(StreamType type, std::shared_ptr<StreamManager> manager);
 
+  void OnStreamConfig(const AudioConfig&) override;
+  void OnStreamConfig(const VideoConfig&) override;
   void OnNeedData(StreamType type, int32_t bytes_max) override;
   void OnEnoughData(StreamType type) override;
   void OnSeekData(StreamType type,
                   Samsung::NaClPlayer::TimeTicks new_position)  override;
 
- private:
-  struct BufferedPacket {
-    StreamType type;
-    std::unique_ptr<ElementaryStreamPacket> packet;
-    BufferedPacket(StreamType t, std::unique_ptr<ElementaryStreamPacket> p)
-      : type(t), packet(std::move(p)) {}
-    bool operator>(const BufferedPacket& another) const {
-      // for packets_ priority queue: lower timestamps go first
-      return packet->GetDts() > another.packet->GetDts();
-    }
-  };
+  bool IsEosReached() const;
 
+   // This class encapsulates a stream object that is appendable to a stream in
+   // a timely manner. Usually this means an ES packet, but a stream
+   // configuration changed outside seek (i.e. during representation change)
+   // also falls into this category.
+  class BufferedStreamObject {
+   public:
+    BufferedStreamObject(StreamType type,
+                         Samsung::NaClPlayer::TimeTicks time)
+        : type_(type),
+          time_(time) {}
+    virtual ~BufferedStreamObject();
+    virtual bool Append(StreamManager*) = 0;
+    virtual bool IsKeyFrame() const = 0;
+    StreamType type() const {
+      return type_;
+    }
+    Samsung::NaClPlayer::TimeTicks time() const {
+      return time_;
+    }
+    bool operator<(const BufferedStreamObject& another) const {
+      return time_ < another.time_;
+    }
+    bool operator==(const BufferedStreamObject& another) const {
+      // Stream objects are equal if they are literally equal, hence no kEps
+      // and it's intentional.
+      return time_ == another.time_;
+    }
+    bool operator!=(const BufferedStreamObject& another) const {
+      return !(*this == another);
+    }
+    bool operator>(const BufferedStreamObject& another) const {
+      return another < *this;
+    }
+    bool operator<=(const BufferedStreamObject& another) const {
+      return !(another < *this);
+    }
+    bool operator>=(const BufferedStreamObject& another) const {
+      return !(*this < another);
+    }
+    struct IsGreater {
+      // for packets_ priority queue: lower timestamps go first
+      bool operator()(
+          const std::unique_ptr<BufferedStreamObject>& p1,
+          const std::unique_ptr<BufferedStreamObject>& p2) const {
+        return *p1 > *p2;
+      }
+    };
+   private:
+    StreamType type_;
+    Samsung::NaClPlayer::TimeTicks time_;
+  };  // class BufferedStreamObject
+ private:
   /// This method assures that <code>packets_</code> buffer top packet can be
   /// safely used to start a playback after a seek operation. A good starting
   /// packet is a video keyframe, so this method essentially drops any audio or
@@ -96,15 +140,55 @@ class PacketsManager : public StreamListener {
   void AppendPackets(Samsung::NaClPlayer::TimeTicks playback_time,
                      Samsung::NaClPlayer::TimeTicks buffered_time);
 
+  /// Checks if EOS is signalled on all streams by stream demuxers. Please note
+  /// it might not be reached on packets manager side yet, i.e. there can still
+  /// be packets that are needed to be sent before EOS can be sent to NaCl
+  /// Player.
+  bool IsEosSignalled() const;
+
+  std::unique_ptr<BufferedStreamObject> CreateBufferedConfig(
+      const AudioConfig&);
+
+  std::unique_ptr<BufferedStreamObject> CreateBufferedConfig(
+      const VideoConfig&);
+
+  template <typename ConfigT>
+  void HandleStreamConfig(StreamType stream, const ConfigT& config) {
+    assert(stream < StreamType::MaxStreamTypes);
+    auto stream_index = static_cast<uint32_t>(stream);
+    if (!streams_[stream_index]) {
+      LOG_ERROR("Received a configuration for a non-existing stream (%s).",
+                stream_index == static_cast<int32_t>(StreamType::Video) ?
+                    "VIDEO" : "AUDIO");
+      return;
+    }
+    if (streams_[stream_index]->IsSeeking() ||
+        !streams_[stream_index]->IsInitialized()) {
+      // If stream is seeking or uninitialized, apply configuration
+      // immediately:
+      streams_[stream_index]->SetConfig(config);
+    } else {
+      // Otherwise enqueue configuration appliance after all packets from a
+      // previous config are sent:
+      packets_.push(CreateBufferedConfig(config));
+    }
+
+  }
+
   pp::Lock packets_lock_;
-  std::priority_queue<BufferedPacket, std::vector<BufferedPacket>,
-                      std::greater<BufferedPacket>> packets_;
+  typedef std::unique_ptr<BufferedStreamObject> BufferedStreamObjectPtr;
+  std::priority_queue<BufferedStreamObjectPtr,
+                      std::vector<BufferedStreamObjectPtr>,
+                      typename BufferedStreamObject::IsGreater> packets_;
 
   /// If <code>true</code>, we are during a seek operation and cannot append
   /// any packets until we fill a buffer with a number of approperiate packets.
   ///
   /// @see method <code>PacketsManager::CheckSeekEndConditions()</code>
   bool seeking_;
+
+  /// EOS is in effect when EOS count reaches number of streams.
+  int eos_count_;
 
   std::array<bool,
             static_cast<int32_t>(StreamType::MaxStreamTypes)> seek_segment_set_;

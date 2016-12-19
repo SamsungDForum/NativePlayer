@@ -10,16 +10,18 @@
 #ifndef SRC_PLAYER_ES_DASH_PLAYER_DEMUXER_FFMPEG_DEMUXER_H_
 #define SRC_PLAYER_ES_DASH_PLAYER_DEMUXER_FFMPEG_DEMUXER_H_
 
+#include <condition_variable>
 #include <functional>
 #include <list>
 #include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <tuple>
 #include <vector>
 
+#include "ppapi/cpp/message_loop.h"
 #include "ppapi/utility/completion_callback_factory.h"
-#include "ppapi/utility/threading/simple_thread.h"
-#include "ppapi/utility/threading/lock.h"
 #include "nacl_player/media_common.h"
 
 extern "C" {
@@ -59,7 +61,9 @@ class FFMpegDemuxer : public StreamDemuxer {
   static constexpr uint32_t kEsPktCallbackDataMessage = 0;
   static constexpr uint32_t kEsPktCallbackDataPacket = 1;
 
-  void StartParsing(int32_t);
+  // main parser thread function
+  void ParsingThreadFn();
+
   void CallbackInDispatcherThread(int32_t, StreamDemuxer::Message msg);
   void DispatchCallback(StreamDemuxer::Message);
   void EsPktCallbackInDispatcherThread(int32_t,
@@ -89,7 +93,7 @@ class FFMpegDemuxer : public StreamDemuxer {
   Type stream_type_;
   int audio_stream_idx_;
   int video_stream_idx_;
-  pp::SimpleThread parser_thread_;
+  std::unique_ptr<std::thread> parser_thread_;
   pp::CompletionCallbackFactory<FFMpegDemuxer> callback_factory_;
 
   VideoConfig video_config_;
@@ -97,7 +101,8 @@ class FFMpegDemuxer : public StreamDemuxer {
   AVFormatContext* format_context_;
   AVIOContext* io_context_;
 
-  pp::Lock buffer_lock_;
+  std::mutex buffer_mutex_;
+  std::condition_variable buffer_condition_;
   pp::MessageLoop callback_dispatcher_;
   std::vector<uint8_t> buffer_;
   // in case of performance issues, buffer_ may be changed to a list of

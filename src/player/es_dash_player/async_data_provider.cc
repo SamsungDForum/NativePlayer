@@ -41,7 +41,7 @@ bool AsyncDataProvider::RequestNextDataSegment() {
   LOG_DEBUG("Requesting next data segment");
   AutoLock lock(iterator_lock_);
   if (next_segment_iterator_ == sequence_->End()) {
-    LOG_INFO("Pass an empty MediaSegment as an end of stream signal.");
+    LOG_DEBUG("Pass an empty MediaSegment as an end of stream signal.");
     data_segment_callback_(MakeUnique<MediaSegment>());
     return false;
   }

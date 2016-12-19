@@ -10,6 +10,7 @@
 #define NATIVE_PLAYER_SRC_PLAYER_ES_DASH_PLAYER_STREAM_LISTENER_H_
 
 #include "common.h"
+#include "demuxer/stream_demuxer.h"
 
 /// @file
 /// @brief This file defines the <code>StreamListener</code> interface.
@@ -25,6 +26,8 @@
 class StreamListener {
  public:
   virtual ~StreamListener();
+  virtual void OnStreamConfig(const AudioConfig&) = 0;
+  virtual void OnStreamConfig(const VideoConfig&) = 0;
   virtual void OnNeedData(StreamType type, int32_t bytes_max) = 0;
   virtual void OnEnoughData(StreamType type) = 0;
   virtual void OnSeekData(StreamType type,

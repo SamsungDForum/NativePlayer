@@ -29,6 +29,7 @@
 #define LOG_DEBUG(msg, ...) Logger::Debug(LOG_STATS, msg, ##__VA_ARGS__)
 
 constexpr double kEps = 0.0001;
+constexpr Samsung::NaClPlayer::TimeTicks kSegmentMargin = 0.1;
 
 template <typename T, class... Args>
 std::unique_ptr<T> MakeUnique(Args&&... args) {

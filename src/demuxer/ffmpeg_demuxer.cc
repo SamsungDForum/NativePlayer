@@ -46,7 +46,7 @@ static const TimeTicks kOneMicrosecond = 1.0 / kMicrosecondsPerSecond;
 static const AVRational kMicrosBase = {1, kMicrosecondsPerSecond};
 
 static const uint32_t kAnalyzeDuration = 10 * kMicrosecondsPerSecond;
-static const uint32_t kAudioStreamProbeSize = 32 * 1024;
+static const uint32_t kAudioStreamProbeSize = 512;
 static const uint32_t kVideoStreamProbeSize = 64 * 1024;
 
 static TimeTicks ToTimeTicks(int64_t time_ticks, AVRational time_base) {
@@ -91,11 +91,9 @@ FFMpegDemuxer::FFMpegDemuxer(const pp::InstanceHandle& instance,
     : stream_type_(type),
       audio_stream_idx_(-1),
       video_stream_idx_(-1),
-      parser_thread_(instance),
       callback_factory_(this),
       format_context_(nullptr),
       io_context_(nullptr),
-      buffer_lock_(),
       context_opened_(false),
       streams_initialized_(false),
       end_of_file_(false),
@@ -107,8 +105,12 @@ FFMpegDemuxer::FFMpegDemuxer(const pp::InstanceHandle& instance,
 
 FFMpegDemuxer::~FFMpegDemuxer() {
   LOG_DEBUG("");
-  exited_ = true;
-  parser_thread_.Join();
+  {
+    std::unique_lock<std::mutex> lock(buffer_mutex_);
+    exited_ = true;
+  }
+  buffer_condition_.notify_one();
+  parser_thread_->join();
   av_freep(io_context_);
   avformat_free_context(format_context_);
   LOG_DEBUG("");
@@ -153,7 +155,9 @@ bool FFMpegDemuxer::Init(const InitCallback& callback,
            format_context_, io_context_);
 
   LOG_INFO("Initialized");
-  parser_thread_.Start();
+  parser_thread_ = MakeUnique<std::thread>([this](){
+    ParsingThreadFn();
+  });
   DispatchCallback(kInitialized);
 
   return true;
@@ -166,23 +170,21 @@ void FFMpegDemuxer::Flush() {
 
 void FFMpegDemuxer::Parse(const std::vector<uint8_t>& data) {
   LOG_DEBUG("parser: %p, data size: %d", this, data.size());
-  if (data.empty()) {
-    LOG_DEBUG("Signal EOF");
-    end_of_file_ = true;
+  bool signal_buffer = false;
+  {
+    std::unique_lock<std::mutex> lock(buffer_mutex_);
+    if (data.empty()) {
+      LOG_DEBUG("Signal EOF");
+      end_of_file_ = true;
+      signal_buffer = true;
+    } else {
+      buffer_.insert(buffer_.end(), data.begin(), data.end());
+      signal_buffer = true;
+      LOG_DEBUG("parser: %p, Added buffer to parser.", this);
+    }
   }
-
-  pp::AutoLock lock(buffer_lock_);
-  buffer_.insert(buffer_.end(), data.begin(), data.end());
-  if (streams_initialized_ || buffer_.size() >= probe_size_) {
-    parser_thread_.message_loop().PostWork(
-        callback_factory_.NewCallback(&FFMpegDemuxer::StartParsing));
-  } else {
-    LOG_DEBUG("buffer size is smaller than %d, wait for next segment",
-              probe_size_);
-    return;
-  }
-
-  LOG_DEBUG("parser: %p, Added buffer to parser.", this);
+  if (signal_buffer)
+    buffer_condition_.notify_one();
 }
 
 bool FFMpegDemuxer::SetAudioConfigListener(
@@ -237,44 +239,34 @@ void FFMpegDemuxer::Close() {
   LOG_DEBUG("");
 }
 
-void FFMpegDemuxer::StartParsing(int32_t) {
-  LOG_DEBUG("parser: %p, parser buffer size: %d", this, buffer_.size());
+void FFMpegDemuxer::ParsingThreadFn() {
   if (!streams_initialized_ && !InitStreamInfo()) {
     LOG_ERROR("Can't initialize demuxer");
     return;
   }
 
   AVPacket pkt;
+  bool finished_parsing = false;
 
-  while (!exited_) {
+  while (!finished_parsing) {
     av_init_packet(&pkt);
     pkt.data = NULL;
     pkt.size = 0;
-    {
-      AutoLock critical_section(buffer_lock_);
-      // ensure, that very last packets will be read.
-      if (!end_of_file_ && buffer_.empty()) {
-        LOG_DEBUG(
-            "buffer is empty and it's not the end of file "
-            "- don't call av_read_frame");
-        break;
-      }
-    }
-
-    Message packet_msg;
+    Message packet_msg = kError;
     unique_ptr<ElementaryStreamPacket> es_pkt;
     int32_t ret = av_read_frame(format_context_, &pkt);
     if (ret < 0) {
       if (ret == AVERROR_EOF) {
-        exited_ = true;
         packet_msg = kEndOfStream;
-      } else {  // Not handled error.
+        finished_parsing = true;
+      } else if (ret != AVERROR_EXIT) {  // Unhandled error.
         char errbuff[kErrorBufferSize];
         int32_t strerror_ret = av_strerror(ret, errbuff, kErrorBufferSize);
         LOG_ERROR("%s av_read_frame error: %d [%s], av_strerror ret: %d",
                   stream_type_ == StreamDemuxer::kVideo ? "VIDEO" : "AUDIO",
                   ret, errbuff, strerror_ret);
-        break;
+      } else {
+        finished_parsing = true;
       }
     } else {
       LOG_DEBUG("parser: %p, got packet with size: %d", this, pkt.size);
@@ -290,10 +282,12 @@ void FFMpegDemuxer::StartParsing(int32_t) {
       es_pkt = MakeESPacketFromAVPacket(&pkt);
     }
 
-    auto es_pkt_callback = std::make_shared<EsPktCallbackData>(packet_msg,
-        std::move(es_pkt));
-    callback_dispatcher_.PostWork(callback_factory_.NewCallback(
-        &FFMpegDemuxer::EsPktCallbackInDispatcherThread, es_pkt_callback));
+    if (packet_msg != kError) {
+      auto es_pkt_callback = std::make_shared<EsPktCallbackData>(packet_msg,
+          std::move(es_pkt));
+      callback_dispatcher_.PostWork(callback_factory_.NewCallback(
+          &FFMpegDemuxer::EsPktCallbackInDispatcherThread, es_pkt_callback));
+    }
 
     av_free_packet(&pkt);
   }
@@ -342,23 +336,35 @@ void FFMpegDemuxer::CallbackConfigInDispatcherThread(int32_t, Type type) {
 }
 
 int FFMpegDemuxer::Read(uint8_t* data, int size) {
-  pp::AutoLock lock(buffer_lock_);
-  LOG_DEBUG("Want to read %d bytes from parser buffer (size: %d)", size,
-            buffer_.size());
+  std::unique_lock<std::mutex> lock(buffer_mutex_);
+  // Order in which conditions are processed below is important.
+  // 1. Make sure buffer_ is empty before we can terminate this demuxer.
+  //    Otherwise packet supply might be non-contiguous when changing
+  //    representations.
+  //    TODO(p.balut): However it might be a good idea to distinguish
+  //      destroying demuxer upon seek, because seek destruction wouldn't
+  //      need to wait for parsing to complete.
+  // 2. EOF causes signalling End Of Stream. This must be done only after
+  //    buffer_ is processed.
+  // 3. See (1).
+  buffer_condition_.wait(lock, [this]() {
+    return end_of_file_ || !buffer_.empty() || exited_;
+  });
 
-  if (buffer_.empty()) {
-    LOG_DEBUG("parser: %p, Parser buffer is empty", this);
-    return AVERROR(EIO);
-  }
-
-  if (size > 0) {
+  if (!buffer_.empty()) {
     size_t read_bytes = std::min(size, static_cast<int>(buffer_.size()));
     memcpy(data, buffer_.data(), read_bytes);
     buffer_.erase(buffer_.begin(), buffer_.begin() + read_bytes);
     return read_bytes;
-  } else {
-    return 0;
   }
+
+  if (end_of_file_)
+    return AVERROR_EOF;
+
+  if (exited_)
+    return AVERROR(EIO);
+
+  return AVERROR(EIO);
 }
 
 void FFMpegDemuxer::InitFFmpeg() {
@@ -395,7 +401,7 @@ bool FFMpegDemuxer::InitStreamInfo() {
     ret = avformat_find_stream_info(format_context_, NULL);
     LOG_DEBUG("find stream info ret %d", ret);
     if (ret < 0) {
-      LOG_DEBUG("ERROR - find stream info error, ret: %d", ret);
+      LOG_ERROR("ERROR - find stream info error, ret: %d", ret);
     }
     av_dump_format(format_context_, NULL, NULL, NULL);
   }

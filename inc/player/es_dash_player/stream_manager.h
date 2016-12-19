@@ -23,11 +23,10 @@
 #include "ppapi/cpp/instance.h"
 
 #include "dash/media_segment_sequence.h"
-#include "player/es_dash_player/packets_manager.h"
 #include "demuxer/stream_demuxer.h"
+#include "player/es_dash_player/stream_listener.h"
 
 class ElementaryStreamPacket;
-class StreamListener;
 
 /// @file
 /// @brief This file defines the <code>StreamManager</code> class.
@@ -167,6 +166,9 @@ class StreamManager : public Samsung::NaClPlayer::ElementaryStreamListener,
   void PrepareForSeek(Samsung::NaClPlayer::TimeTicks new_position);
 
   bool AppendPacket(std::unique_ptr<ElementaryStreamPacket>);
+
+  bool SetConfig(const AudioConfig& audio_config);
+  bool SetConfig(const VideoConfig& video_config);
 
   void SetSegmentToTime(Samsung::NaClPlayer::TimeTicks time,
       Samsung::NaClPlayer::TimeTicks* timestamp,
