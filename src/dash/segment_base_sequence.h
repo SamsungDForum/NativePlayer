@@ -58,6 +58,7 @@ class SegmentBaseSequence : public MediaSegmentSequence {
   void LoadIndexSegment();
   double Duration(uint32_t segment) const;
   double Timestamp(uint32_t segment) const;
+  std::unique_ptr<dash::mpd::ISegment> GetBaseSegment() const;
 
   std::vector<dash::mpd::IBaseUrl*> base_urls_;
   dash::mpd::ISegmentBase* segment_base_;

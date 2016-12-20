@@ -47,7 +47,7 @@ static const AVRational kMicrosBase = {1, kMicrosecondsPerSecond};
 
 static const uint32_t kAnalyzeDuration = 10 * kMicrosecondsPerSecond;
 static const uint32_t kAudioStreamProbeSize = 32 * 1024;
-static const uint32_t kVideoStreamProbeSize = 128 * 1024;
+static const uint32_t kVideoStreamProbeSize = 64 * 1024;
 
 static TimeTicks ToTimeTicks(int64_t time_ticks, AVRational time_base) {
   int64_t us = av_rescale_q(time_ticks, time_base, kMicrosBase);
@@ -221,7 +221,15 @@ bool FFMpegDemuxer::SetDRMInitDataListener(const DrmInitCallback& callback) {
 
 void FFMpegDemuxer::SetTimestamp(TimeTicks timestamp) {
   LOG_INFO("current timestamp: %f, new: %f", timestamp_, timestamp);
-  timestamp_ = timestamp;
+  // When parsing using Ffmpeg in version < 2.6.1 timestamp has to
+  // be added after each seek, to avoid playback problems.
+  // Version 2.6.1 of ffmpeg fixes that problem.
+  if (LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(56, 25, 101)) {
+    timestamp_ = timestamp;
+  } else  {
+    LOG_INFO("Skipping updating timestamp as libavformat %s "
+        "handles it properly", LIBAVFORMAT_IDENT);
+  }
 }
 
 void FFMpegDemuxer::Close() {

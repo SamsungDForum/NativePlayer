@@ -44,6 +44,20 @@ var clips = [
     poster: 'resources/bunny.jpg',
     describe: 'This is clip played directly from URL',
   },
+  {
+    title: 'HEVC Single Resolution Multi-Rate',
+    url: 'http://dash.akamaized.net/dash264/TestCasesHEVC/1a/1/TOS_OnDemand_HEVC_MultiRate.mpd',
+    type: ClipTypeEnum.kDash,
+    poster: 'resources/tos-poster.jpg',
+    describe: 'http://testassets.dashif.org/#testvector/list',
+  },
+  {
+    title: 'HEVC Multi-Resolution Multi-Rate',
+    url: 'http://dash.akamaized.net/dash264/TestCasesHEVC/2a/1/TOS_OnDemand_HEVC_MultiRes.mpd',
+    type: ClipTypeEnum.kDash,
+    poster: 'resources/tos-poster.jpg',
+    describe: 'http://testassets.dashif.org/#testvector/list',
+  },
 ];
 
 var TvKeyEnum = {

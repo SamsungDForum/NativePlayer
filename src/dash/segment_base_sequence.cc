@@ -78,9 +78,27 @@ MediaSegmentSequence::Iterator SegmentBaseSequence::MediaSegmentForTime(
 std::unique_ptr<dash::mpd::ISegment> SegmentBaseSequence::GetInitSegment()
     const {
   const dash::mpd::IURLType* url = segment_base_->GetInitialization();
-  if (!url) return {};
+  if (url) return AdoptUnique(url->ToSegment(base_urls_));
 
-  return AdoptUnique(url->ToSegment(base_urls_));
+  /*
+   * TODO(samsung)
+   * Adapt ffmpeg demuxer and our code to self initializing content,
+   * i.e. without initialization segment.
+   */
+  std::string range = segment_base_->GetIndexRange();
+  size_t pos = range.find("-");
+  if (pos == std::string::npos) return {};
+
+  uint32_t sidx_beg = std::stoul(range.substr(0, pos));
+  if (sidx_beg == 0) return {};
+
+  range = "0-" + std::to_string(sidx_beg - 1);
+  auto segment = GetBaseSegment();
+  if (!segment) return {};
+
+  segment->Range(range);
+  segment->HasByteRange(true);
+  return segment;
 }
 
 std::unique_ptr<dash::mpd::ISegment>
@@ -100,7 +118,7 @@ std::unique_ptr<dash::mpd::ISegment> SegmentBaseSequence::GetIndexSegment()
     const {
   if (segment_base_->GetIndexRange().empty()) return {};
 
-  auto segment = GetInitSegment();
+  auto segment = GetBaseSegment();
   if (!segment) return {};
 
   segment->Range(segment_base_->GetIndexRange());
@@ -181,8 +199,8 @@ void SegmentBaseSequence::LoadIndexSegment() {
   size_t pos = range.find("-");
   if (pos == std::string::npos) return;
 
-  uint32_t sidx_beg = atoi(range.substr(0, pos).c_str());
-  uint32_t sidx_end = atoi(range.substr(pos + 1).c_str());
+  uint32_t sidx_beg = std::stoul(range.substr(0, pos));
+  uint32_t sidx_end = std::stoul(range.substr(pos + 1));
   ParseSidx(data, sidx_beg, sidx_end);
 }
 
@@ -198,6 +216,19 @@ double SegmentBaseSequence::Timestamp(uint32_t segment) const {
     return MediaSegmentSequence::kInvalidSegmentTimestamp;
 
   return segment_index_[segment].timestamp;
+}
+
+std::unique_ptr<dash::mpd::ISegment> SegmentBaseSequence::GetBaseSegment()
+    const {
+  const dash::mpd::IURLType* url = segment_base_->GetInitialization();
+  if (url) return AdoptUnique(url->ToSegment(base_urls_));
+
+  auto base_urls = base_urls_;
+  if (base_urls.empty()) return {};
+
+  const auto base_url = base_urls.back();
+  base_urls.pop_back();
+  return AdoptUnique(base_url->ToMediaSegment(base_urls));
 }
 
 SegmentBaseIterator::SegmentBaseIterator()
@@ -222,7 +253,7 @@ std::unique_ptr<dash::mpd::ISegment> SegmentBaseIterator::Get() const {
   std::ostringstream oss;
   oss << ent.byte_offset << "-" << (ent.byte_offset + ent.byte_size - 1);
 
-  auto segment = sequence_->GetInitSegment();
+  auto segment = sequence_->GetBaseSegment();
   if (!segment) return {};
 
   segment->Range(oss.str());
