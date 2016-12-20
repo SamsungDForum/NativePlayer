@@ -78,7 +78,8 @@ class UrlPlayerController : public PlayerController {
         cc_factory_(this),
         subtitles_visible_(true),
         message_sender_(std::move(message_sender)),
-        state_(PlayerState::kUnitialized) {}
+        state_(PlayerState::kUnitialized),
+        video_duration_(0.) {}
 
   /// Destroys <code>UrlPlayerController</code> object. This also
   /// destroys a <code>MediaPlayer</code> object and thus a player pipeline.
@@ -145,6 +146,7 @@ class UrlPlayerController : public PlayerController {
 
   PlayerState state_;
   Samsung::NaClPlayer::Rect view_rect_;
+  Samsung::NaClPlayer::TimeTicks video_duration_;
 };
 
 #endif  // NATIVE_PLAYER_INC_PLAYER_URL_PLAYER_URL_PLAYER_CONTROLLER_H_

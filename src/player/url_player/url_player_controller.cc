@@ -82,6 +82,7 @@ void UrlPlayerController::InitializeUrlPlayer(
   TimeTicks duration;
   if (player_->GetDuration(duration) == ErrorCodes::Success) {
     message_sender_->SetMediaDuration(duration);
+    video_duration_ = duration;
     LOG_INFO("Got duration: %f [s].", duration);
   } else {
     LOG_INFO("Failed to retreive duration!");
@@ -119,6 +120,13 @@ void UrlPlayerController::Pause() {
 
 void UrlPlayerController::Seek(TimeTicks to_time) {
   LOG_INFO("Seek to %f", to_time);
+  // video_duration_ equal to 0 means we failed to retrieve the video duration,
+  // we still should try to seek, but it is possiable that seek will fail.
+  if (video_duration_ && to_time > video_duration_ - kEps) {
+    to_time = video_duration_ - kEps;
+  } else if (to_time < kEps) {
+    to_time = 0 + kEps;
+  }
   int32_t ret =
       player_->Seek(to_time, std::bind(&UrlPlayerController::OnSeek, this, _1));
   if (ret < ErrorCodes::CompletionPending) {
@@ -179,6 +187,10 @@ void UrlPlayerController::OnSetDisplayRect(int32_t ret) {
 void UrlPlayerController::OnSeek(int32_t ret) {
   TimeTicks current_playback_time = 0.0;
   player_->GetCurrentTime(current_playback_time);
+  // Java script UI will wait for buffering complet after seek.
+  // If seek files it will block seeking forever.
+  if (ret != ErrorCodes::Success)
+    message_sender_->BufferingCompleted();
   LOG_INFO("After seek time: %f, result: %d", current_playback_time, ret);
 }
 
