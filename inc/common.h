@@ -16,6 +16,9 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
+
+#include "ppapi/cpp/url_request_info.h"
 
 #include "nacl_player/common.h"
 
@@ -102,5 +105,13 @@ inline auto WeakBind(
       method, std::weak_ptr<ClassT>(class_ptr),
       std::forward<Args>(args)...);
 }
+
+pp::URLRequestInfo GetRequestForURL(const std::string& url);
+
+int32_t ProcessURLRequestOnSideThread(const pp::URLRequestInfo& request,
+                                      std::string* out);
+
+int32_t ProcessURLRequestOnSideThread(const pp::URLRequestInfo& request,
+                                      std::vector<uint8_t>* out);
 
 #endif  // NATIVE_PLAYER_SRC_COMMON_H_

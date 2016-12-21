@@ -12,12 +12,22 @@
 #include <string>
 #include <cassert>
 
+#include "ppapi/cpp/completion_callback.h"
+#include "ppapi/cpp/url_loader.h"
+#include "ppapi/cpp/url_response_info.h"
+#include "ppapi/cpp/url_request_info.h"
+
 #include "libdash/libdash.h"
 
 #include "dash/media_stream.h"
 #include "dash/media_segment_sequence.h"
 
 #include "representation_builder.h"
+
+using pp::CompletionCallback;
+using pp::URLLoader;
+using pp::URLResponseInfo;
+using pp::URLRequestInfo;
 
 // From DASH spec:
 //
@@ -177,21 +187,35 @@ std::unique_ptr<DashManifest> DashManifest::ParseMPD(
   std::unique_ptr<dash::IDASHManager> manager{CreateDashManager()};
   if (!manager) return {};
 
-  // Copy url to vector and add '\0' to avoid const cast on url.c_str(),
-  // as IDASHManager::Open(char*) expects non const pointer.
-  std::vector<char> cfilename(url.begin(), url.end());
-  cfilename.push_back('\0');
-  std::unique_ptr<dash::mpd::IMPD> mpd{manager->Open(&(cfilename[0]))};
-  if (!mpd) return {};
+  URLRequestInfo mpd_request = GetRequestForURL(url);
+  std::string mpd_data;
+  int32_t error_code =  ProcessURLRequestOnSideThread(mpd_request, &mpd_data);
+  if (error_code != PP_OK) {
+    LOG_ERROR("Failed to download MPD: %d", error_code);
+    return {};
+  }
+  std::unique_ptr<dash::mpd::IMPD> mpd{manager->Open(url.c_str(),
+                                                     mpd_data.data(),
+                                                     mpd_data.size())};
+  if (!mpd) {
+    LOG_ERROR("libdash returned null");
+    return {};
+  }
 
   // According to DASH spec must be at least one more Period
   assert(mpd->GetPeriods().size() > 0);
-  if (mpd->GetPeriods().empty()) return {};
+  if (mpd->GetPeriods().empty()) {
+    LOG_ERROR("No periods");
+    return {};
+  }
 
   auto manifest = MakeUnique<DashManifest>(
       std::move(manager), std::move(mpd), visitor);
 
-  if (!manifest || !manifest->pimpl_) return {};
+  if (!manifest || !manifest->pimpl_) {
+    LOG_ERROR("Failed to create dash manifest");
+    return {};
+  }
 
   return manifest;
 }

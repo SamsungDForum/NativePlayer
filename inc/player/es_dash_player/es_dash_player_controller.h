@@ -169,14 +169,19 @@ class EsDashPlayerController : public PlayerController,
   /// stream representations, begins stream configuration procedure and starts
   /// a side worker thread.
   ///
+  /// @param[in] result A PPAPI error code, required in PP_MessageLoop tasks.
+  ///   PP_OK is an expected value.
   /// @param[in] mpd_file_path A URL of the DASH manifest file.
-  void InitializeDash(const std::string& mpd_file_path);
+  void InitializeDash(int32_t /*result*/, const std::string& mpd_file_path);
 
   /// @public
   /// Initializes audio and video streams. This method choses initial
   /// representations for each available stream and initializes DRM if it is
   /// present.
-  void InitializeStreams(int32_t);
+  ///
+  /// @param[in] result A PPAPI error code, required in PP_MessageLoop tasks.
+  ///   PP_OK is an expected value.
+  void InitializeStreams(int32_t /*result*/);
 
   void InitializeVideoStream(Samsung::NaClPlayer::DRMType /*drm_type*/);
 

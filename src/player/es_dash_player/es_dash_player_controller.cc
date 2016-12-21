@@ -68,7 +68,12 @@ void EsDashPlayerController::InitPlayer(const std::string& mpd_file_path,
   }
 
   InitializeSubtitles(subtitle, encoding);
-  InitializeDash(mpd_file_path);
+
+  player_thread_ = MakeUnique<pp::SimpleThread>(instance_);
+  player_thread_->Start();
+  player_thread_->message_loop().PostWork(
+      cc_factory_.NewCallback(&EsDashPlayerController::InitializeDash,
+                              mpd_file_path));
 }
 
 void EsDashPlayerController::InitializeSubtitles(const std::string& subtitle,
@@ -85,7 +90,7 @@ void EsDashPlayerController::InitializeSubtitles(const std::string& subtitle,
       subtitle.c_str(), encoding.c_str());
 }
 
-void EsDashPlayerController::InitializeDash(
+void EsDashPlayerController::InitializeDash(int32_t,
     const std::string& mpd_file_path) {
   // we support only PlayReady right now
   unique_ptr<DrmPlayReadyContentProtectionVisitor> visitor =
@@ -95,9 +100,6 @@ void EsDashPlayerController::InitializeDash(
     LOG_ERROR("Failed to load/parse MPD manifest file!");
     return;
   }
-
-  player_thread_ = MakeUnique<pp::SimpleThread>(instance_);
-  player_thread_->Start();
 
   auto es_data_source = std::make_shared<ESDataSource>();
   TimeTicks duration = ParseDurationToSeconds(dash_parser_->GetDuration());

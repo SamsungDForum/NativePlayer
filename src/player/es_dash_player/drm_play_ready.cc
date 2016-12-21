@@ -56,8 +56,7 @@ void DrmPlayReadyListener::OnLicenseRequest(uint32_t request_size,
                                               const void* request) {
   LOG_DEBUG("request_size: %d, str: [%s]", request_size, request);
 
-  URLRequestInfo lic_request(instance_);
-  lic_request.SetURL(cp_descriptor_->system_url_);
+  URLRequestInfo lic_request = GetRequestForURL(cp_descriptor_->system_url_);
   lic_request.SetMethod("POST");
   lic_request.AppendDataToBody(request, request_size);
 
@@ -70,46 +69,14 @@ void DrmPlayReadyListener::OnLicenseRequest(uint32_t request_size,
 void DrmPlayReadyListener::ProcessLicenseRequestOnSideThread(
     int32_t, URLRequestInfo lic_request) {
   LOG_DEBUG("Start");
-  if (lic_request.is_null()) {
-    LOG_ERROR("lic_request is null!");
-    return;
-  }
-
-  URLLoader loader(instance_);
-  int32_t ret = loader.Open(lic_request, CompletionCallback());
+  std::string response;
+  int32_t ret = ProcessURLRequestOnSideThread(lic_request, &response);
   if (ret != PP_OK) {
-    LOG_ERROR("Failed to open URLLoader with license request, code: %d", ret);
+    LOG_ERROR("Failed to download licens: %d", ret);
     return;
   }
 
-  URLResponseInfo response_info(loader.GetResponseInfo());
-  if (response_info.is_null()) {
-    LOG_ERROR("URLLoader::GetResponseInfo returned null");
-    return;
-  }
-
-  int32_t status_code = response_info.GetStatusCode();
-  if (status_code != 200) {
-    LOG_ERROR("Unexpected HTTP status code: %d", status_code);
-    return;
-  }
-
-  string response;
-  char buf[32 * 1024];
-  while (true) {
-    ret = loader.ReadResponseBody(buf, sizeof(buf), CompletionCallback());
-    if (ret < 0) {
-      LOG_ERROR("Failed to ReadResponseBody, result: %d", ret);
-      return;
-    }
-
-    if (ret == PP_OK) break;
-
-    response.append(buf, ret);
-  }
-
-  loader.Close();
-  LOG_DEBUG("Successfully retreived license request!");
+  LOG_INFO("Successfully retrieved license request!");
   // Some servers (e.g. YouTube)
   // put data into HTTP body before XML;
   // this tries to skip this data
@@ -119,7 +86,6 @@ void DrmPlayReadyListener::ProcessLicenseRequestOnSideThread(
   ret = player_->SetDRMSpecificData(DRMType_Playready,
                                     DRMOperation_InstallLicense,
                                     response.size(), response.data());
-
   if (ret != ErrorCodes::Success) {
     LOG_ERROR("Failed to install license!, code: %d", ret);
     return;

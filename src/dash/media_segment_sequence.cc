@@ -6,6 +6,10 @@
  * @author Adam Bujalski
  */
 
+#include <sstream>
+
+#include "ppapi/c/pp_errors.h"
+
 #include "dash/media_segment_sequence.h"
 
 #include "segment_base_sequence.h"
@@ -13,10 +17,6 @@
 #include "segment_template_sequence.h"
 #include "sequence_iterator.h"
 #include "util.h"
-
-namespace {
-const uint32_t kBufSize = 32 * 1024;
-}  // namespace
 
 MediaSegmentSequence::~MediaSegmentSequence() {}
 
@@ -120,20 +120,24 @@ double MediaSegmentSequence::Iterator::SegmentTimestamp(
 
 
 bool DownloadSegment(dash::mpd::ISegment* seg, std::vector<uint8_t>* data) {
-  if (!seg) return false;
+  if (!seg || !data) return false;
 
-  if (!seg->StartDownload()) return false;
+  dash::network::IChunk* chunk = static_cast<dash::network::IChunk*>(seg);
+  LOG_INFO("Downloading segment: %s%s%s", chunk->AbsoluteURI().c_str(),
+            chunk->HasByteRange() ? " Range: " : "",
+            chunk->HasByteRange() ? chunk->Range().c_str() : "");
+  auto request = GetRequestForURL(chunk->AbsoluteURI());
+  if (chunk->HasByteRange()) {
+    std::ostringstream oss;
+    oss << "Range: bytes=" << chunk->Range();
+    request.SetProperty(PP_URLREQUESTPROPERTY_HEADERS, oss.str());
+  }
 
-  uint8_t buf[kBufSize];
-
-  int bytes_read = 0;
-  do {
-    bytes_read = seg->Read(buf, kBufSize);
-    if (bytes_read > 0)
-      data->insert(data->end(), buf, buf + bytes_read);
-    else if (bytes_read < 0)
-      return false;
-  } while (bytes_read > 0);
+  int32_t error_code = ProcessURLRequestOnSideThread(request, data);
+  if (error_code != PP_OK) {
+    LOG_ERROR("Segment download failed: %d", error_code);
+    return false;
+  }
 
   return true;
 }
