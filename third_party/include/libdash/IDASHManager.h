@@ -33,7 +33,16 @@ namespace dash
              *  @param      path    A URI to a MPD file
              *  @return     a pointer to an dash::mpd::IMPD object
              */
-            virtual mpd::IMPD* Open (char *path) = 0;
+            virtual mpd::IMPD* Open (const char *path) = 0;
+
+            /**
+             *  Returns a pointer to dash::mpd::IMPD object representing the the information found in the MPD file specified by \em path but read from a memory buffer
+             *  @param      path    A URI to a MPD file
+             *  @param      buffer  Memory buffer from which data should be read
+             *  @param      size    Buffer size
+             *  @return     a pointer to an dash::mpd::IMPD object
+             */
+            virtual mpd::IMPD* Open (const char* path, const char* buffer, int size) = 0;
 
             /**
              *  Frees allocated memory and deletes the DashManager
