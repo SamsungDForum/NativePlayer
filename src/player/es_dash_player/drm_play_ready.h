@@ -11,6 +11,7 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "nacl_player/drm_listener.h"
@@ -40,6 +41,10 @@ class DrmPlayReadyContentProtectionDescriptor
 
   std::string scheme_id_uri_;
   std::string system_url_;
+  std::unordered_map<std::string, std::string> key_request_properties_;
+
+  std::string init_data_type_;
+  std::vector<uint8_t> init_data_;
 };
 
 /// Provided by application, opaque to dash_parser
@@ -75,6 +80,7 @@ class DrmPlayReadyListener : public Samsung::NaClPlayer::DRMListener {
 
  private:
   void ProcessLicenseRequestOnSideThread(int32_t,
+                                         const std::string& url,
                                          pp::URLRequestInfo lic_request);
 
   pp::InstanceHandle instance_;

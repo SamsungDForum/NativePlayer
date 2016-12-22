@@ -122,6 +122,9 @@ class StreamManager : public Samsung::NaClPlayer::ElementaryStreamListener,
       Samsung::NaClPlayer::DRMType drm_type =
           Samsung::NaClPlayer::DRMType_Unknown);
 
+  void SetDrmInitData(const std::string& type,
+                      const std::vector<uint8_t>& init_data);
+
   /// Changes a <code>MediaSegmentSequence</code> object associated with this
   /// stream. This method resets internal demuxer to parse a given new media
   /// segment, usually causing a change in a stream configuration.

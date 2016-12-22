@@ -9,6 +9,7 @@
 #ifndef NATIVE_PLAYER_INC_PLAYER_PLAYER_PROVIDER_H_
 #define NATIVE_PLAYER_INC_PLAYER_PLAYER_PROVIDER_H_
 
+#include <unordered_map>
 #include <string>
 
 #include "nacl_player/common.h"
@@ -84,12 +85,21 @@ class PlayerProvider {
   ///   are not be available.
   /// @param[in] encoding A code of subtitles formating. It is an optional
   ///   parameter, if is not specified then UTF-8 is used.
+  /// @param[in] drm_license_url URL of license server used to acquire content
+  ///   decryption license.
+  /// @param[in] drm_key_request_properties HTTP/HTTPS request header elements
+  ///   used when requesting license from license server
+  ///   (see <code>drm_license_url</code>).
+  ///
   /// @return A configured and initialized <code>PlayerController<code>.
   std::shared_ptr<PlayerController> CreatePlayer(PlayerType type,
-                                     const std::string& url,
-                                     const Samsung::NaClPlayer::Rect view_rect,
-                                     const std::string& subtitle = {},
-                                     const std::string& encoding = {});
+      const std::string& url,
+      const Samsung::NaClPlayer::Rect view_rect,
+      const std::string& subtitle = {},
+      const std::string& encoding = {},
+      const std::string& drm_license_url = {},
+      const std::unordered_map<std::string, std::string>&
+            drm_key_request_properties = {});
 
  private:
   pp::InstanceHandle instance_;

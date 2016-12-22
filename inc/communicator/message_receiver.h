@@ -125,10 +125,20 @@ class MessageReceiver : public pp::MessageHandler {
   ///   type value.
   /// @param[in] encoding A subtitle encoding code. It is an optional
   ///   parameter, which has to be a <code>string</code> type value.
+  /// @param[in] license_url URL of license server used to acquire content
+  ///   decryption license. It is an optional parameter, which has to be
+  ///   a <code>string</code> type value.
+  /// @param[in] key_request_properties HTTP/HTTPS request header elements
+  ///   used when requesting license from license server
+  ///   (see <code>license_url</code>). It is an optional parameter, which
+  ///   has to be a <code>dictionary</code> type value.
+  ///
   /// @see kLoadMedia
   /// @see ClipTypeEnum
   void LoadMedia(const pp::Var& type, const pp::Var& url,
-                   const pp::Var& subtitle, const pp::Var& encoding);
+                 const pp::Var& subtitle, const pp::Var& encoding,
+                 const pp::Var& license_url,
+                 const pp::Var& key_request_properties);
 
   /// @public
   /// Handles a <code>kPause</code> message, and requests the player
@@ -172,7 +182,7 @@ class MessageReceiver : public pp::MessageHandler {
   ///   by an integer value.
   /// @see kChangeViewRect
   void ChangeViewRect(const pp::Var& x_position, const pp::Var& y_position,
-                        const pp::Var& width, const pp::Var& height);
+                      const pp::Var& width, const pp::Var& height);
 
   /// @public
   /// Handles a <code>kChangeSubtitlesRepresentation</code> message,

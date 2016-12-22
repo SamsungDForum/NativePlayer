@@ -394,11 +394,24 @@ function onLoadClick() {
     subtitles = clips[selected_clip].subtitles[index].subtitle;
     encoding = clips[selected_clip].subtitles[index].encoding;
   }
-  nacl_module.postMessage({'messageToPlayer': MessageToPlayerEnum.kLoadMedia,
-                           'type' : clips[selected_clip].type,
-                           'subtitle': subtitles,
-                           'encoding': encoding,
-                           'url': clips[selected_clip].url});
+
+  var message = {
+    'messageToPlayer': MessageToPlayerEnum.kLoadMedia,
+    'type' : clips[selected_clip].type,
+    'subtitle': subtitles,
+    'encoding': encoding,
+    'url': clips[selected_clip].url
+  };
+
+  if (clips[selected_clip].hasOwnProperty('drm_license_url'))
+    message.drm_license_url = clips[selected_clip].drm_license_url;
+
+  if (clips[selected_clip].hasOwnProperty('drm_key_request_properties')) {
+    message.drm_key_request_properties =
+        clips[selected_clip].drm_key_request_properties;
+  }
+
+  nacl_module.postMessage(message);
 }
 
 function onPlayPauseClick() {

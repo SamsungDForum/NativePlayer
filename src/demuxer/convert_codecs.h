@@ -278,12 +278,12 @@ Samsung::NaClPlayer::VideoCodec_Profile ConvertMPEG2VideoCodecProfile(
 
 Samsung::NaClPlayer::VideoFrame_Format ConvertVideoFrameFormat(int format) {
   switch (format) {
-    case PIX_FMT_YUV422P:
+    case AV_PIX_FMT_YUV422P:
       return Samsung::NaClPlayer::VIDEOFRAME_FORMAT_YV16;
-    case PIX_FMT_YUV420P:
-    case PIX_FMT_YUVJ420P:
+    case AV_PIX_FMT_YUV420P:
+    case AV_PIX_FMT_YUVJ420P:
       return Samsung::NaClPlayer::VIDEOFRAME_FORMAT_YV12;
-    case PIX_FMT_YUVA420P:
+    case AV_PIX_FMT_YUVA420P:
       return Samsung::NaClPlayer::VIDEOFRAME_FORMAT_YV12A;
     default:
       LOG_ERROR("unknown format %d", format);

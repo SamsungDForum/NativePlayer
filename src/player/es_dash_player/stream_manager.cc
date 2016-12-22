@@ -77,6 +77,9 @@ class StreamManager::Impl :
   void OnEnoughData();
   void OnSeekData(Samsung::NaClPlayer::TimeTicks new_position);
 
+  void OnDRMInitData(const std::string& type,
+                     const std::vector<uint8_t>& init_data);
+
   void PrepareForSeek(Samsung::NaClPlayer::TimeTicks new_position);
 
   void SetSegmentToTime(Samsung::NaClPlayer::TimeTicks time,
@@ -98,8 +101,6 @@ class StreamManager::Impl :
 
   void OnAudioConfig(const AudioConfig& audio_config);
   void OnVideoConfig(const VideoConfig& video_config);
-  void OnDRMInitData(const std::string& type,
-                     const std::vector<uint8_t>& init_data);
 
   pp::InstanceHandle instance_handle_;
   StreamType stream_type_;
@@ -502,7 +503,7 @@ void StreamManager::Impl::OnVideoConfig(const VideoConfig& video_config) {
 }
 
 void StreamManager::Impl::OnDRMInitData(const std::string& type,
-                                  const std::vector<uint8_t>& init_data) {
+                                        const std::vector<uint8_t>& init_data) {
   LOG_DEBUG("stream type: %d, init data type: %s, init_data.size(): %d",
             stream_type_, type.c_str(), init_data.size());
   if (drm_initialized_) {
@@ -523,46 +524,59 @@ void StreamManager::Impl::OnDRMInitData(const std::string& type,
 StreamManager::StreamManager(pp::InstanceHandle instance, StreamType type)
   :pimpl_(MakeUnique<Impl>(instance, type)) {
 }
+
 StreamManager::~StreamManager() {
 }
+
 void StreamManager::OnNeedData(int32_t bytes_max) {
   pimpl_->OnNeedData(bytes_max);
 }
+
 void StreamManager::OnEnoughData() {
   pimpl_->OnEnoughData();
 }
+
 void StreamManager::OnSeekData(TimeTicks new_position) {
   pimpl_->OnSeekData(new_position);
 }
+
 bool StreamManager::IsInitialized() {
   return pimpl_->IsInitialized();
 }
+
 bool StreamManager::IsSeeking() const {
   return pimpl_->IsSeeking();
 }
+
 void StreamManager::PrepareForSeek(
     Samsung::NaClPlayer::TimeTicks new_position) {
   pimpl_->PrepareForSeek(new_position);
 }
+
 void StreamManager::SetSegmentToTime(Samsung::NaClPlayer::TimeTicks time,
     Samsung::NaClPlayer::TimeTicks* timestamp,
     Samsung::NaClPlayer::TimeTicks* duration) {
   pimpl_->SetSegmentToTime(time, timestamp, duration);
 }
+
 bool StreamManager::AppendPacket(
     std::unique_ptr<ElementaryStreamPacket> packet) {
   return pimpl_->AppendPacket(std::move(packet));
 }
+
 bool StreamManager::SetConfig(const AudioConfig& audio_config) {
   return pimpl_->SetConfig(audio_config);
 }
+
 bool StreamManager::SetConfig(const VideoConfig& video_config) {
   return pimpl_->SetConfig(video_config);
 }
+
 Samsung::NaClPlayer::TimeTicks StreamManager::GetClosestKeyframeTime(
     Samsung::NaClPlayer::TimeTicks time) {
   return pimpl_->GetClosestKeyframeTime(time);
 }
+
 bool StreamManager::Initialize(
     unique_ptr<MediaSegmentSequence> segment_sequence,
     shared_ptr<ESDataSource> es_data_source,
@@ -576,6 +590,12 @@ bool StreamManager::Initialize(
                             stream_configured_callback, es_packet_callback,
                             stream_listener, drm_type, shared_from_this());
 }
+
+void StreamManager::SetDrmInitData(const std::string& type,
+                                   const std::vector<uint8_t>& init_data) {
+  pimpl_->OnDRMInitData(type, init_data);
+}
+
 bool StreamManager::UpdateBuffer(TimeTicks playback_time) {
   return pimpl_->UpdateBuffer(playback_time);
 }
@@ -584,5 +604,3 @@ void StreamManager::SetMediaSegmentSequence(
     std::unique_ptr<MediaSegmentSequence> segment_sequence) {
   pimpl_->SetMediaSegmentSequence(std::move(segment_sequence));
 }
-
-

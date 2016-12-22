@@ -285,7 +285,7 @@ void FFMpegDemuxer::ParsingThreadFn() {
           &FFMpegDemuxer::EsPktCallbackInDispatcherThread, es_pkt_callback));
     }
 
-    av_free_packet(&pkt);
+    av_packet_unref(&pkt);
   }
 
   LOG_DEBUG("Finished parsing data. buffer left: %d, parser: %p",
@@ -435,37 +435,40 @@ void FFMpegDemuxer::UpdateAudioConfig() {
   LOG_DEBUG("audio ffmpeg duration: %lld %s", s->duration,
             s->duration == AV_NOPTS_VALUE ? "(AV_NOPTS_VALUE)" : "");
 
-  audio_config_.codec_type = ConvertAudioCodec(s->codec->codec_id);
-  audio_config_.sample_format = ConvertSampleFormat(s->codec->sample_fmt);
-  if (s->codec->bits_per_coded_sample > 0) {
-    audio_config_.bits_per_channel = s->codec->bits_per_coded_sample;
+  AVSampleFormat sample_format =
+      static_cast<AVSampleFormat>(s->codecpar->format);
+  audio_config_.codec_type = ConvertAudioCodec(s->codecpar->codec_id);
+  audio_config_.sample_format = ConvertSampleFormat(sample_format);
+  if (s->codecpar->bits_per_coded_sample > 0) {
+    audio_config_.bits_per_channel = s->codecpar->bits_per_coded_sample;
   } else {
-    audio_config_.bits_per_channel =
-        av_get_bytes_per_sample(s->codec->sample_fmt) * 8 / s->codec->channels;
+    audio_config_.bits_per_channel = av_get_bytes_per_sample(sample_format) * 8;
+    audio_config_.bits_per_channel /= s->codecpar->channels;
   }
   audio_config_.channel_layout =
-      ConvertChannelLayout(s->codec->channel_layout, s->codec->channels);
-  audio_config_.samples_per_second = s->codec->sample_rate;
+      ConvertChannelLayout(s->codecpar->channel_layout, s->codecpar->channels);
+  audio_config_.samples_per_second = s->codecpar->sample_rate;
   if (audio_config_.codec_type == Samsung::NaClPlayer::AUDIOCODEC_TYPE_AAC) {
     audio_config_.codec_profile =
-        ConvertAACAudioCodecProfile(s->codec->profile);
+        ConvertAACAudioCodecProfile(s->codecpar->profile);
     // this method read channel_no, and modify
     // audio_config_.samples_per_second too
     channel_no =
-        PrepareAACHeader(s->codec->extradata, s->codec->extradata_size);
+        PrepareAACHeader(s->codecpar->extradata, s->codecpar->extradata_size);
     // if we read channel no change channel_layout,
     // (else we sould break for AAC ;( )
     if (channel_no >= 0)
       audio_config_.channel_layout =
-          ConvertChannelLayout(s->codec->channel_layout, channel_no);
+          ConvertChannelLayout(s->codecpar->channel_layout, channel_no);
   }
 
-  if (s->codec->extradata_size > 0) {
+  if (s->codecpar->extradata_size > 0) {
     audio_config_.extra_data.assign(
-        s->codec->extradata, s->codec->extradata + s->codec->extradata_size);
+        s->codecpar->extradata,
+        s->codecpar->extradata + s->codecpar->extradata_size);
   }
   char fourcc[20];
-  av_get_codec_tag_string(fourcc, sizeof(fourcc), s->codec->codec_tag);
+  av_get_codec_tag_string(fourcc, sizeof(fourcc), s->codecpar->codec_tag);
   LOG_DEBUG(
       "audio configuration - codec: %d, profile: %d, codec_tag: (%s), "
       "sample_format: %d, bits_per_channel: %d, channel_layout: %d, "
@@ -486,7 +489,7 @@ void FFMpegDemuxer::UpdateVideoConfig() {
   LOG_DEBUG("video ffmpeg duration: %lld %s", s->duration,
             s->duration == AV_NOPTS_VALUE ? "(AV_NOPTS_VALUE)" : "");
 
-  video_config_.codec_type = ConvertVideoCodec(s->codec->codec_id);
+  video_config_.codec_type = ConvertVideoCodec(s->codecpar->codec_id);
   switch (video_config_.codec_type) {
     case Samsung::NaClPlayer::VIDEOCODEC_TYPE_VP8:
       video_config_.codec_profile =
@@ -498,36 +501,38 @@ void FFMpegDemuxer::UpdateVideoConfig() {
       break;
     case Samsung::NaClPlayer::VIDEOCODEC_TYPE_H264:
       video_config_.codec_profile =
-          ConvertH264VideoCodecProfile(s->codec->profile);
+          ConvertH264VideoCodecProfile(s->codecpar->profile);
       break;
     case Samsung::NaClPlayer::VIDEOCODEC_TYPE_MPEG2:
       video_config_.codec_profile =
-          ConvertMPEG2VideoCodecProfile(s->codec->profile);
+          ConvertMPEG2VideoCodecProfile(s->codecpar->profile);
       break;
     default:
       video_config_.codec_profile =
           Samsung::NaClPlayer::VIDEOCODEC_PROFILE_UNKNOWN;
   }
 
-  video_config_.frame_format = ConvertVideoFrameFormat(s->codec->pix_fmt);
+  video_config_.frame_format = ConvertVideoFrameFormat(s->codecpar->format);
 
   AVDictionaryEntry* webm_alpha =
       av_dict_get(s->metadata, "alpha_mode", NULL, 0);
   if (webm_alpha && !strcmp(webm_alpha->value, "1"))
     video_config_.frame_format = Samsung::NaClPlayer::VIDEOFRAME_FORMAT_YV12A;
 
-  video_config_.size = Size(s->codec->coded_width, s->codec->coded_height);
+  video_config_.size = Size(s->codecpar->width,
+                            s->codecpar->height);
 
   LOG_DEBUG("r_frame_rate %d. %d#", s->r_frame_rate.num, s->r_frame_rate.den);
   video_config_.frame_rate = Rational(s->r_frame_rate.num, s->r_frame_rate.den);
 
-  if (s->codec->extradata_size > 0) {
+  if (s->codecpar->extradata_size > 0) {
     video_config_.extra_data.assign(
-        s->codec->extradata, s->codec->extradata + s->codec->extradata_size);
+        s->codecpar->extradata,
+        s->codecpar->extradata + s->codecpar->extradata_size);
   }
 
   char fourcc[20];
-  av_get_codec_tag_string(fourcc, sizeof(fourcc), s->codec->codec_tag);
+  av_get_codec_tag_string(fourcc, sizeof(fourcc), s->codecpar->codec_tag);
   LOG_DEBUG(
       "video configuration - codec: %d, profile: %d, codec_tag: (%s), "
       "frame: %d, visible_rect: %d %d ",

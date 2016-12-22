@@ -15,9 +15,12 @@
 using Samsung::NaClPlayer::Rect;
 
 std::shared_ptr<PlayerController> PlayerProvider::CreatePlayer(
-                    PlayerType type, const std::string& url,
-                    const Samsung::NaClPlayer::Rect view_rect,
-                    const std::string& subtitle, const std::string& encoding) {
+    PlayerType type, const std::string& url,
+    const Samsung::NaClPlayer::Rect view_rect,
+    const std::string& subtitle, const std::string& encoding,
+    const std::string& drm_license_url,
+    const std::unordered_map<std::string, std::string>&
+        drm_key_request_properties) {
   switch (type) {
     case kUrl: {
       std::shared_ptr<UrlPlayerController> controller =
@@ -30,7 +33,8 @@ std::shared_ptr<PlayerController> PlayerProvider::CreatePlayer(
       std::shared_ptr<EsDashPlayerController> controller =
           std::make_shared<EsDashPlayerController>(instance_, message_sender_);
       controller->SetViewRect(view_rect);
-      controller->InitPlayer(url, subtitle, encoding);
+      controller->InitPlayer(url, subtitle, encoding,
+                             drm_license_url, drm_key_request_properties);
       return controller;
     }
     default:

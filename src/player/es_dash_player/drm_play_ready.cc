@@ -6,6 +6,9 @@
  * @author Tomasz Borkowski
  */
 
+#include <algorithm>
+#include <sstream>
+
 #include "ppapi/c/pp_errors.h"
 #include "ppapi/cpp/completion_callback.h"
 #include "ppapi/cpp/url_loader.h"
@@ -35,6 +38,11 @@ using dash::mpd::IDescriptor;
 const char* kAttributeNameType = "type";
 const char* kPlayReadyType = "playready";
 const char* kXMLTag = "<?xml";
+const char* kSoapTagEnd = "</soap:Envelope>";
+const char* kPlayreadSchemeIdUri =
+    "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95";
+const char* kSchemeIdUriAttribute = "schemeIdUri";
+const char* kCencPsshAttribute = "cenc:pssh";
 
 DrmPlayReadyListener::DrmPlayReadyListener(
     const pp::InstanceHandle& instance,
@@ -47,8 +55,8 @@ DrmPlayReadyListener::DrmPlayReadyListener(
 }
 
 void DrmPlayReadyListener::OnInitdataLoaded(DRMType drm_type,
-                                              uint32_t init_data_size,
-                                              const void* init_data) {
+                                            uint32_t init_data_size,
+                                            const void* init_data) {
   LOG_INFO("drm_type: %d, init_data_size: %d", drm_type, init_data_size);
   LOG_DEBUG("init_data str: [[%s]]",
             ToHexString(init_data_size,
@@ -56,28 +64,47 @@ void DrmPlayReadyListener::OnInitdataLoaded(DRMType drm_type,
 }
 
 void DrmPlayReadyListener::OnLicenseRequest(uint32_t request_size,
-                                              const void* request) {
+                                            const void* request) {
+  LOG_INFO("Making license request to: %s",
+           cp_descriptor_->system_url_.c_str());
   LOG_DEBUG("request_size: %d, str: [%s]", request_size, request);
+  std::string soap_request(static_cast<const char*>(request),
+                           static_cast<const char*>(request) + request_size);
+
+  // Clear garbage at the end...
+  size_t soap_end = soap_request.find(kSoapTagEnd);
+  if (soap_end != std::string::npos) {
+    soap_request.resize(soap_end + strlen(kSoapTagEnd));
+  }
 
   ++pending_licence_requests_;
 
   URLRequestInfo lic_request = GetRequestForURL(cp_descriptor_->system_url_);
   lic_request.SetMethod("POST");
-  lic_request.AppendDataToBody(request, request_size);
+  lic_request.AppendDataToBody(soap_request.data(), soap_request.size());
+  if (!cp_descriptor_->key_request_properties_.empty()) {
+    std::ostringstream oss;
+    for (const auto& e : cp_descriptor_->key_request_properties_)
+      oss << e.first << ": " << e.second << "\n";
+
+    lic_request.SetHeaders(oss.str());
+  }
 
   side_thread_loop_.PostWork(cc_factory_.NewCallback(
-      &DrmPlayReadyListener::ProcessLicenseRequestOnSideThread, lic_request));
+      &DrmPlayReadyListener::ProcessLicenseRequestOnSideThread,
+      cp_descriptor_->system_url_, lic_request));
 
   LOG_DEBUG("Redirected license request to a side thread");
 }
 
 void DrmPlayReadyListener::ProcessLicenseRequestOnSideThread(
-    int32_t, URLRequestInfo lic_request) {
+    int32_t, const std::string& url, URLRequestInfo lic_request) {
   LOG_DEBUG("Start");
   std::string response;
   int32_t ret = ProcessURLRequestOnSideThread(lic_request, &response);
   if (ret != PP_OK) {
-    LOG_ERROR("Failed to download licens: %d", ret);
+    LOG_ERROR("Failed to download license from: %s result: %d",
+              url.c_str(), ret);
     return;
   }
 
@@ -120,6 +147,21 @@ DrmPlayReadyContentProtectionVisitor::Visit(const vector<IDescriptor*>& cp) {
   // search IDescriptor elements
   for (auto mpd_desc : cp) {
     desc->scheme_id_uri_ = mpd_desc->GetSchemeIdUri();
+    std::transform(desc->scheme_id_uri_.begin(),
+        desc->scheme_id_uri_.end(),
+        desc->scheme_id_uri_.begin(),
+        [](unsigned char c) { return std::tolower(c); });
+
+    if (desc->scheme_id_uri_ == kPlayreadSchemeIdUri) {
+      for (auto n : mpd_desc->GetAdditionalSubNodes()) {
+        if (n->GetName() == kCencPsshAttribute) {
+          desc->init_data_type_ = n->GetName();
+          desc->init_data_ = Base64Decode(n->GetText());
+        }
+      }
+
+      return desc;
+    }
 
     // search INode elements
     for (const auto& sub_node : mpd_desc->GetAdditionalSubNodes()) {

@@ -86,6 +86,59 @@ int32_t ProcessURLRequest(const pp::URLRequestInfo& request, T* out) {
 
 }  // namespace
 
+std::string ToHexString(uint32_t size, const uint8_t* data) {
+  std::ostringstream oss;
+  oss.setf(std::ios::hex, std::ios::basefield);
+  for (size_t i = 0; i < size; ++i) {
+    oss.width(2);
+    oss.fill('0');
+    oss << static_cast<unsigned>(data[i]);
+    oss << " ";
+  }
+
+  return oss.str();
+}
+
+// Simple implementation based on https://en.wikipedia.org/wiki/Base64
+std::vector<uint8_t> Base64Decode(const std::string& text) {
+  if (text.length() % 4) {
+    LOG_ERROR("Invalid base64 input - not divisible by 4");
+    return {};
+  }
+
+  static const std::string codes =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
+
+  size_t pos = text.find('=');
+  uint32_t decoded_size = (text.length() * 3) / 4;
+  if (pos != std::string::npos) decoded_size -= text.length() - pos;
+
+  std::vector<uint8_t> ret(decoded_size);
+  uint32_t j = 0;
+  uint32_t b[4];
+  for (uint32_t i = 0; i < text.length(); i += 4) {
+    for (uint32_t k = 0; k < 4; ++k) {
+      pos = codes.find(text[i + k]);
+      if (pos == std::string::npos) {
+        LOG_ERROR("Bad character found in input");
+        return {};
+      }
+
+      b[k] = pos;
+    }
+
+    ret[j++] = ((b[0] << 2) | (b[1] >> 4));
+    if (b[2] >= 64) continue;
+
+    ret[j++] = ((b[1] << 4) | (b[2] >> 2));
+    if (b[3] >= 64) continue;
+
+    ret[j++] = ((b[2] << 6)) | b[3];
+  }
+
+  return ret;
+}
+
 pp::URLRequestInfo GetRequestForURL(const std::string& url) {
   pp::URLRequestInfo request(CurrentInstanceHandle());
   request.SetURL(url);

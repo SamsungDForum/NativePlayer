@@ -120,12 +120,17 @@ void RepresentationBuilder::ExtractContentProtection(
   if (!visitor_) return;
 
   auto descriptor = visitor_->Visit(rb->GetContentProtection());
-  if (!descriptor) return;
+  if (!descriptor && !drm_descriptor_) return;
+
+  if (!descriptor)
+    descriptor = drm_descriptor_;
 
   if (type_ == MediaStreamType::Audio)
     audio_.description.content_protection = descriptor;
   else if (type_ == MediaStreamType::Video)
     video_.description.content_protection = descriptor;
+  else
+    drm_descriptor_ = descriptor;
 }
 
 void RepresentationBuilder::ExtractInfo(dash::mpd::IRepresentationBase* rb) {
@@ -164,6 +169,7 @@ void RepresentationBuilder::ProcessNode(dash::mpd::IPeriod* period) {
 
 void RepresentationBuilder::ProcessNode(
     dash::mpd::IAdaptationSet* adaptation_set) {
+  drm_descriptor_ = nullptr;
   UpdateRepresentation(representation_, adaptation_set);
   ExtractRepresentationType(adaptation_set);
   // ExtractInfo rely on determined representation type

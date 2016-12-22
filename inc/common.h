@@ -53,18 +53,9 @@ enum class StreamType : int32_t {
 const Samsung::NaClPlayer::TimeTicks kEndOfStream =
     std::numeric_limits<Samsung::NaClPlayer::TimeTicks>::infinity();
 
-inline std::string ToHexString(uint32_t size, const uint8_t* data) {
-  std::ostringstream oss;
-  oss.setf(std::ios::hex, std::ios::basefield);
-  for (size_t i = 0; i < size; ++i) {
-    oss.width(2);
-    oss.fill('0');
-    oss << static_cast<unsigned>(data[i]);
-    oss << " ";
-  }
+std::string ToHexString(uint32_t size, const uint8_t* data);
 
-  return oss.str();
-}
+std::vector<uint8_t> Base64Decode(const std::string& text);
 
 // From:
 // https://isocpp.org/wiki/faq/pointers-to-members#macro-for-ptr-to-memfn

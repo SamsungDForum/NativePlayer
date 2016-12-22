@@ -13,6 +13,7 @@
 #include <array>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "nacl_player/es_data_source.h"
@@ -110,13 +111,21 @@ class EsDashPlayerController : public PlayerController,
   ///   <code>MessageSender</code> given during construction of this object.
   ///   May be an empty string if there are no external subtitles to be loaded.
   /// @param[in] encoding Encoding of the subtitles file pointed by the
-  ///   <code>subtitle</code> parameter. UTF-8 encoding will be uesd as a
+  ///   <code>subtitle</code> parameter. UTF-8 encoding will be used as a
   ///   default if an empty string is given.
+  /// @param[in] drm_license_url URL of license server used to acquire content
+  ///   decryption license.
+  /// @param[in] drm_key_request_properties HTTP/HTTPS request header elements
+  ///   used when requesting license from license server
+  ///   (see <code>drm_license_url</code>).
   ///
   /// @see EsDashPlayerController::EsDashPlayerController()
   /// @see MessageSender::ShowSubtitles()
   void InitPlayer(const std::string& url, const std::string& subtitle = {},
-                  const std::string& encoding = {});
+                  const std::string& encoding = {},
+                  const std::string& drm_license_url = {},
+                  const std::unordered_map<std::string, std::string>&
+                          drm_key_request_properties = {});
 
   // Overloaded methods defined by PlayerController, don't have to be commented
   void Play() override;
@@ -164,7 +173,7 @@ class EsDashPlayerController : public PlayerController,
   /// @param[in] subtitle A URL of the subtitles files.
   /// @param[in] encoding An encoding of the subtitles file.
   void InitializeSubtitles(const std::string& subtitle,
-                          const std::string& encoding);
+                           const std::string& encoding);
 
   /// @public
   /// Loads and parses a DASH manifest file. This method loads available
@@ -224,6 +233,12 @@ class EsDashPlayerController : public PlayerController,
              static_cast<int32_t>(StreamType::MaxStreamTypes)> streams_;
   std::vector<VideoStream> video_representations_;
   std::vector<AudioStream> audio_representations_;
+
+  std::string drm_license_url_;
+  std::unordered_map<std::string, std::string> drm_key_request_properties_;
+
+  class Impl;
+  friend class Impl;
 };
 
 #endif  // NATIVE_PLAYER_INC_PLAYER_ES_DASH_PLAYER_ES_DASH_PLAYER_CONTROLLER_H_

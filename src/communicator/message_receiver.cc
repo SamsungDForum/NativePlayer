@@ -9,19 +9,22 @@
 
 #include "communicator/message_receiver.h"
 
+#include <unordered_map>
 #include <string>
 
+#include "ppapi/cpp/var_array.h"
 #include "ppapi/cpp/var_dictionary.h"
 
 #include "communicator/messages.h"
 
 using pp::Var;
+using pp::VarArray;
 using pp::VarDictionary;
 
 namespace Communication {
 
 void MessageReceiver::HandleMessage(pp::InstanceHandle /*instance*/,
-                                      const Var& message_data) {
+                                    const Var& message_data) {
   LOG_INFO("MessageHandler - HandleMessage");
   if (!message_data.is_dictionary()) {
     LOG_ERROR("Not supported message format.");
@@ -47,7 +50,9 @@ void MessageReceiver::HandleMessage(pp::InstanceHandle /*instance*/,
       LoadMedia(msg.Get(kKeyType),
                 msg.Get(kKeyUrl),
                 msg.Get(kKeySubtitle),
-                msg.Get(kKeyEncoding));
+                msg.Get(kKeyEncoding),
+                msg.Get(kDrmLicenseUrl),
+                msg.Get(kDrmKeyRequestProperties));
       break;
     case MessageToPlayer::kPlay:
       Play();
@@ -87,7 +92,9 @@ Var MessageReceiver::HandleBlockingMessage(
 void MessageReceiver::ClosePlayer() { player_controller_.reset(); }
 
 void MessageReceiver::LoadMedia(const Var& type, const Var& url,
-                      const Var& subtitle, const Var& encoding) {
+                                const Var& subtitle, const Var& encoding,
+                                const Var& license_url,
+                                const Var& key_request_properties) {
   if (!type.is_int() || !url.is_string()) {
     LOG_ERROR("Invalid message - 'url' should be a string");
     return;
@@ -105,14 +112,26 @@ void MessageReceiver::LoadMedia(const Var& type, const Var& url,
       return;
   }
 
-  if (subtitle.is_string()) {
-    player_controller_ = player_provider_->CreatePlayer(
-        player_type, url.AsString(), view_rect_, subtitle.AsString(),
-        encoding.is_string() ? encoding.AsString() : "");
-  } else {
-    player_controller_ =
-        player_provider_->CreatePlayer(player_type, url.AsString(), view_rect_);
+  std::unordered_map<std::string, std::string> key_request_map;
+  if (key_request_properties.is_dictionary()) {
+    VarDictionary dict{key_request_properties};
+    VarArray properties_array = dict.GetKeys();
+    for (uint32_t i = 0; i < properties_array.GetLength(); ++i) {
+      Var key = properties_array.Get(i);
+      Var val = dict.Get(key);
+      if (!val.is_string())
+        continue;
+
+      key_request_map[key.AsString()] = val.AsString();
+    }
   }
+
+  player_controller_ = player_provider_->CreatePlayer(
+      player_type, url.AsString(), view_rect_,
+      subtitle.is_string() ? subtitle.AsString() : "",
+      encoding.is_string() ? encoding.AsString() : "",
+      license_url.is_string() ? license_url.AsString() : "",
+      key_request_map);
 }
 
 void MessageReceiver::Play() {

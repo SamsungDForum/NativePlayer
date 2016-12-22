@@ -242,6 +242,9 @@ const std::string kKeyWidth = "width";
 /// This key maps to an <code>int</code> type value.
 const std::string kKeyHeight = "height";
 
+const std::string kDrmLicenseUrl = "drm_license_url";
+const std::string kDrmKeyRequestProperties = "drm_key_request_properties";
+
 /// A string value used in messages as a <code>VarDictionary</code> key.
 /// This key maps to an <code>int</code> type value.
 const std::string kKeyXCoordination = "x_coordinate";

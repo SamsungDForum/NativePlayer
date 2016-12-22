@@ -44,12 +44,106 @@ using std::vector;
 
 const int64_t kMainLoopDelay = 50;  // in milliseconds
 
+namespace {
+
+template<typename RepType>
+void PrintChosenRepresentation(const RepType& s);
+
+template<>
+void PrintChosenRepresentation(const VideoStream& s) {
+  LOG_INFO("Chosen video rep is: %d x %d, bitrate: %u, id: %d",
+            s.width, s.height, s.description.bitrate, s.description.id);
+}
+
+template<>
+void PrintChosenRepresentation(const AudioStream& s) {
+  LOG_INFO("Chosen audio rep is: %s, bitrate: %u, id: %d",
+            s.language.c_str(), s.description.bitrate, s.description.id);
+}
+}
+
+class EsDashPlayerController::Impl {
+ public:
+  template<typename RepType>
+  static void InitializeStream(EsDashPlayerController* thiz,
+                               StreamType type,
+                               Samsung::NaClPlayer::DRMType drm_type,
+                               const std::vector<RepType>& representations) {
+    if (representations.empty()) return;
+
+    RepType s = GetHighestBitrateStream(representations);
+    thiz->message_sender_->SetRepresentations(representations);
+    thiz->message_sender_->ChangeRepresentation(type, s.description.id);
+    PrintChosenRepresentation(s);
+
+    if (s.description.content_protection) {  // DRM content detected
+      LOG_INFO("DRM content detected.");
+      auto playready_descriptor =
+          std::static_pointer_cast<DrmPlayReadyContentProtectionDescriptor>(
+              s.description.content_protection);
+      if (!thiz->drm_license_url_.empty())
+        playready_descriptor->system_url_ = thiz->drm_license_url_;
+      if (!thiz->drm_key_request_properties_.empty()) {
+        playready_descriptor->key_request_properties_ =
+            thiz->drm_key_request_properties_;
+      }
+
+      thiz->drm_listener_ = make_shared<DrmPlayReadyListener>(
+          thiz->instance_, thiz->player_);
+
+      thiz->drm_listener_->SetContentProtectionDescriptor(
+          playready_descriptor);
+
+      thiz->player_->SetDRMListener(thiz->drm_listener_);
+    }
+
+    auto& stream_manager = thiz->streams_[static_cast<int32_t>(type)];
+    stream_manager = make_shared<StreamManager>(thiz->instance_, type);
+    auto configured_callback = WeakBind(
+        &EsDashPlayerController::OnStreamConfigured,
+        std::static_pointer_cast<EsDashPlayerController>(
+            thiz->shared_from_this()), _1);
+    // We bravely capture this because we are bound to outlive stream_manager.
+    auto es_packet_callback = [thiz](StreamDemuxer::Message message,
+        std::unique_ptr<ElementaryStreamPacket> packet) {
+      thiz->packets_manager_.OnEsPacket(message, std::move(packet));
+    };
+
+    bool success = stream_manager->Initialize(
+        thiz->dash_parser_->GetSequence(
+            static_cast<MediaStreamType>(type), s.description.id),
+        thiz->data_source_, configured_callback, es_packet_callback,
+        &thiz->packets_manager_, drm_type);
+    thiz->packets_manager_.SetStream(type, stream_manager);
+
+    if (s.description.content_protection) {
+      auto play_ready_desc =
+          static_cast<DrmPlayReadyContentProtectionDescriptor*>(
+              s.description.content_protection.get());
+      if (!play_ready_desc->init_data_type_.empty()) {
+        stream_manager->SetDrmInitData(play_ready_desc->init_data_type_,
+                                       play_ready_desc->init_data_);
+      }
+    }
+
+    if (!success) {
+      LOG_ERROR("Failed to initialize video stream manager");
+      thiz->state_ = PlayerState::kError;
+    }
+  }
+};
+
 void EsDashPlayerController::InitPlayer(const std::string& mpd_file_path,
-                                        const std::string& subtitle,
-                                        const std::string& encoding) {
+    const std::string& subtitle,
+    const std::string& encoding,
+    const std::string& drm_license_url,
+    const std::unordered_map<std::string, std::string>&
+        drm_key_request_properties) {
   LOG_INFO("Loading media from : [%s]", mpd_file_path.c_str());
   CleanPlayer();
 
+  drm_license_url_ = drm_license_url;
+  drm_key_request_properties_ = drm_key_request_properties;
   player_ = make_shared<MediaPlayer>();
   listeners_.player_listener =
       make_shared<MediaPlayerListener>(message_sender_);
@@ -133,96 +227,14 @@ void EsDashPlayerController::InitializeStreams(int32_t) {
 
 void EsDashPlayerController::InitializeVideoStream(
     Samsung::NaClPlayer::DRMType drm_type) {
-  if (video_representations_.empty()) return;
-
-  LOG_INFO("Video reps count: %d", video_representations_.size());
-  VideoStream s = GetHighestBitrateStream(video_representations_);
-  message_sender_->SetRepresentations(video_representations_);
-  message_sender_->ChangeRepresentation(StreamType::Video,
-                                            s.description.id);
-  LOG_DEBUG("Chosen video rep is: %d x %d, bitrate: %u, id: %d", s.width,
-            s.height, s.description.bitrate, s.description.id);
-
-  if (s.description.content_protection) {  // DRM content detected
-    LOG_INFO("DRM content detected.");
-    drm_listener_ = make_shared<DrmPlayReadyListener>(instance_, player_);
-
-    drm_listener_->SetContentProtectionDescriptor(
-        std::static_pointer_cast<DrmPlayReadyContentProtectionDescriptor>(
-            s.description.content_protection));
-
-    player_->SetDRMListener(drm_listener_);
-  }
-
-  auto& stream_manager = streams_[static_cast<int32_t>(StreamType::Video)];
-  stream_manager = make_shared<StreamManager>(instance_, StreamType::Video);
-  auto configured_callback = WeakBind(
-      &EsDashPlayerController::OnStreamConfigured,
-      std::static_pointer_cast<EsDashPlayerController>(
-          shared_from_this()), _1);
-  // We bravely capture this because we are bound to outlive stream_manager.
-  auto es_packet_callback = [this](StreamDemuxer::Message message,
-      std::unique_ptr<ElementaryStreamPacket> packet) {
-    packets_manager_.OnEsPacket(message, std::move(packet));
-  };
-
-  bool success = stream_manager->Initialize(
-      dash_parser_->GetVideoSequence(s.description.id),
-      data_source_, configured_callback, es_packet_callback, &packets_manager_,
-      drm_type);
-  packets_manager_.SetStream(StreamType::Video, stream_manager);
-
-  if (!success) {
-    LOG_ERROR("Failed to initialize video stream manager");
-    state_ = PlayerState::kError;
-  }
+  Impl::InitializeStream(this, StreamType::Video, drm_type,
+                         video_representations_);
 }
 
 void EsDashPlayerController::InitializeAudioStream(
     Samsung::NaClPlayer::DRMType drm_type) {
-  if (audio_representations_.empty()) return;
-
-  LOG_INFO("Audio reps count: %d", audio_representations_.size());
-  AudioStream s = GetHighestBitrateStream(audio_representations_);
-  message_sender_->SetRepresentations(audio_representations_);
-  message_sender_->ChangeRepresentation(StreamType::Audio,
-                                            s.description.id);
-  LOG_DEBUG("Chosen audio rep is: %s, bitrate: %u, id: %d", s.language.c_str(),
-            s.description.bitrate, s.description.id);
-
-  if (s.description.content_protection) {  // DRM content detected
-    LOG_INFO("DRM content detected.");
-    auto drm_listener = make_shared<DrmPlayReadyListener>(instance_, player_);
-
-    drm_listener->SetContentProtectionDescriptor(
-        std::static_pointer_cast<DrmPlayReadyContentProtectionDescriptor>(
-            s.description.content_protection));
-
-    player_->SetDRMListener(drm_listener);
-  }
-
-  auto& stream_manager = streams_[static_cast<int32_t>(StreamType::Audio)];
-  stream_manager = make_shared<StreamManager>(instance_, StreamType::Audio);
-  auto configured_callback = WeakBind(
-      &EsDashPlayerController::OnStreamConfigured,
-      std::static_pointer_cast<EsDashPlayerController>(
-          shared_from_this()), _1);
-  // We bravely capture this because we are bound to outlive stream_manager.
-  auto es_packet_callback = [this](StreamDemuxer::Message message,
-      std::unique_ptr<ElementaryStreamPacket> packet) {
-    packets_manager_.OnEsPacket(message, std::move(packet));
-  };
-
-  bool success = stream_manager->Initialize(
-      dash_parser_->GetAudioSequence(s.description.id),
-      data_source_, configured_callback, es_packet_callback,
-      &packets_manager_, drm_type);
-  packets_manager_.SetStream(StreamType::Audio, stream_manager);
-
-  if (!success) {
-    LOG_ERROR("Failed to initialize audio stream manager");
-    state_ = PlayerState::kError;
-  }
+  Impl::InitializeStream(this, StreamType::Audio, drm_type,
+                         audio_representations_);
 }
 
 void EsDashPlayerController::Play() {

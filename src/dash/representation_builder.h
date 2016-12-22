@@ -88,6 +88,8 @@ class RepresentationBuilder {
   AudioStream audio_;
   VideoStream video_;
 
+  std::shared_ptr<ContentProtectionDescriptor> drm_descriptor_;
+
   // Non owning pointer
   ContentProtectionVisitor* visitor_;
 };
