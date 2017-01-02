@@ -16,6 +16,13 @@ var nacl_height = 720;
 var uses_logging = true;
 logs_level = 'log';
 
+function visibilityChangeHandler() {
+  if (document.hidden)
+    onPauseClick();
+  else
+    onPlayClick();
+}
+
 function getQueryVariable(variable) {
   var query = window.location.search.substring(1);
   var vars = query.split('&');
@@ -40,6 +47,7 @@ function initPlayer() {
   document.getElementById('total_bar').addEventListener('mousemove', onSeekHover, false);
   document.getElementById('total_bar').addEventListener('mouseout', onSeekOut, false);
   document.getElementById('played_bar').addEventListener('click', onSeekClicked, false);
+  document.addEventListener('visibilitychange', visibilityChangeHandler);
 
   var i, key_code = {}, supported_keys;
   if (typeof window['tizen'] != 'undefined')
