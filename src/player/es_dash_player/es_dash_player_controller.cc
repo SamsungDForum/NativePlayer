@@ -343,19 +343,22 @@ void EsDashPlayerController::UpdateStreamsBuffer(int32_t) {
     }
   }
 
-  bool has_buffered_packets = packets_manager_.UpdateBuffer(
-      current_playback_time);
+  if (state_ == PlayerState::kReady) {
+    bool has_buffered_packets = packets_manager_.UpdateBuffer(
+        current_playback_time);
 
-  // All streams reached EOS:
-  if (!segments_pending && !has_buffered_packets &&
-      packets_manager_.IsEosReached()) {
-    int32_t ret = data_source_->SetEndOfStream();
-    if (ret == ErrorCodes::Success)
-      LOG_INFO("End of stream signalized from all streams, set EOS - OK");
-    else
-      LOG_ERROR("Failed to signalize end of stream to ESDataSource");
-    return;
-  } else if (player_thread_) {
+    // All streams reached EOS:
+    if (!segments_pending && !has_buffered_packets &&
+        packets_manager_.IsEosReached()) {
+      int32_t ret = data_source_->SetEndOfStream();
+      if (ret == ErrorCodes::Success)
+        LOG_INFO("End of stream signalized from all streams, set EOS - OK");
+      else
+        LOG_ERROR("Failed to signalize end of stream to ESDataSource");
+      return;
+    }
+  }
+  if (player_thread_) {
     player_thread_->message_loop().PostWork(
         cc_factory_.NewCallback(&EsDashPlayerController::UpdateStreamsBuffer),
         kMainLoopDelay);

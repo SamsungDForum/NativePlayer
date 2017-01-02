@@ -349,7 +349,10 @@ bool StreamManager::Impl::UpdateBuffer(TimeTicks playback_time) {
 
   // Check if we need to request next segment download.
   if (!segment_pending_) {
-    if (buffered_segments_time_ - playback_time < kNextSegmentTimeThreshold) {
+    auto next_segment_threshold = data_provider_->AverageSegmentDuration();
+    if (next_segment_threshold <= kEps)
+        next_segment_threshold = kNextSegmentTimeThreshold;
+    if (buffered_segments_time_ - playback_time < next_segment_threshold) {
       LOG_DEBUG("Requesting next %s segment...",
                 stream_type_ == StreamType::Video ? "VIDEO" : "AUDIO");
       bool has_more_segments = data_provider_->RequestNextDataSegment();

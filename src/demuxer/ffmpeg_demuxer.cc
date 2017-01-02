@@ -40,14 +40,14 @@ const std::string kDRMInitDataType("cenc:pssh");
 
 static const int kKidLength = 16;
 static const size_t kErrorBufferSize = 1024;
-static const uint32_t kBufferSize = 32 * 1024;
+static const uint32_t kBufferSize = 128 * 1024;
 static const uint32_t kMicrosecondsPerSecond = 1000000;
 static const TimeTicks kOneMicrosecond = 1.0 / kMicrosecondsPerSecond;
 static const AVRational kMicrosBase = {1, kMicrosecondsPerSecond};
 
 static const uint32_t kAnalyzeDuration = 10 * kMicrosecondsPerSecond;
 static const uint32_t kAudioStreamProbeSize = 512;
-static const uint32_t kVideoStreamProbeSize = 64 * 1024;
+static const uint32_t kVideoStreamProbeSize = 128 * 1024;
 
 static TimeTicks ToTimeTicks(int64_t time_ticks, AVRational time_base) {
   int64_t us = av_rescale_q(time_ticks, time_base, kMicrosBase);
