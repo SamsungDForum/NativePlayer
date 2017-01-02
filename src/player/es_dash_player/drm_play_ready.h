@@ -70,6 +70,9 @@ class DrmPlayReadyListener : public Samsung::NaClPlayer::DRMListener {
     cp_descriptor_ = cp_descriptor;
   }
 
+  bool IsInitialized() const;
+  void Reset();
+
  private:
   void ProcessLicenseRequestOnSideThread(int32_t,
                                          pp::URLRequestInfo lic_request);
@@ -79,6 +82,7 @@ class DrmPlayReadyListener : public Samsung::NaClPlayer::DRMListener {
   pp::CompletionCallbackFactory<DrmPlayReadyListener> cc_factory_;
   std::shared_ptr<DrmPlayReadyContentProtectionDescriptor> cp_descriptor_;
   std::shared_ptr<Samsung::NaClPlayer::MediaPlayer> player_;
+  std::atomic<int> pending_licence_requests_;
 };
 
 #endif  // NATIVE_PLAYER_SRC_PLAYER_ES_DASH_PLAYER_DRM_PLAY_READY_H_

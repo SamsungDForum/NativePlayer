@@ -14,7 +14,7 @@ using pp::Var;
 
 void SubtitleListener::OnShowSubtitle(TimeTicks duration, const char* text) {
   Var varText = Var(text);
-  LOG_INFO("Got subtitle: %s , duration: %f", text, duration);
+  LOG_DEBUG("Got subtitle: %s , duration: %f", text, duration);
   if (auto message_sender = message_sender_.lock()) {
     message_sender->ShowSubtitles(duration, varText);
   }
@@ -42,7 +42,7 @@ void MediaBufferingListener::OnBufferingStart() {
 }
 
 void MediaBufferingListener::OnBufferingProgress(uint32_t percent) {
-  LOG_INFO("Event: Buffering progress: %d %%.", percent);
+  LOG_DEBUG("Event: Buffering progress: %d %%.", percent);
 }
 
 void MediaBufferingListener::OnBufferingComplete() {

@@ -223,15 +223,7 @@ bool FFMpegDemuxer::SetDRMInitDataListener(const DrmInitCallback& callback) {
 
 void FFMpegDemuxer::SetTimestamp(TimeTicks timestamp) {
   LOG_INFO("current timestamp: %f, new: %f", timestamp_, timestamp);
-  // When parsing using Ffmpeg in version < 2.6.1 timestamp has to
-  // be added after each seek, to avoid playback problems.
-  // Version 2.6.1 of ffmpeg fixes that problem.
-  if (LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(56, 25, 101)) {
-    timestamp_ = timestamp;
-  } else  {
-    LOG_INFO("Skipping updating timestamp as libavformat %s "
-        "handles it properly", LIBAVFORMAT_IDENT);
-  }
+  timestamp_ = timestamp;
 }
 
 void FFMpegDemuxer::Close() {
@@ -610,13 +602,22 @@ unique_ptr<ElementaryStreamPacket> FFMpegDemuxer::MakeESPacketFromAVPacket(
 
   AVStream* s = format_context_->streams[pkt->stream_index];
 
-  es_packet->SetPts(ToTimeTicks(pkt->pts, s->time_base) + timestamp_);
-  es_packet->SetDts(ToTimeTicks(pkt->dts, s->time_base) + timestamp_);
   es_packet->SetDuration(ToTimeTicks(pkt->duration, s->time_base));
   es_packet->SetKeyFrame(pkt->flags == 1);
 
   AVEncInfo* enc_info = reinterpret_cast<AVEncInfo*>(
       av_packet_get_side_data(pkt, AV_PKT_DATA_ENCRYPT_INFO, NULL));
+
+  // When parsing using Ffmpeg in version < 2.6.1 timestamp has to
+  // be added after each seek, to avoid playback problems.
+  // Version 2.6.1 of ffmpeg fixes that problem for unencrypted packets.
+  if (LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(56, 25, 101) || enc_info) {
+      es_packet->SetPts(ToTimeTicks(pkt->pts, s->time_base) + timestamp_);
+      es_packet->SetDts(ToTimeTicks(pkt->dts, s->time_base) + timestamp_);
+  } else {
+      es_packet->SetPts(ToTimeTicks(pkt->pts, s->time_base));
+      es_packet->SetDts(ToTimeTicks(pkt->dts, s->time_base));
+  }
 
   if (!enc_info) return es_packet;
 

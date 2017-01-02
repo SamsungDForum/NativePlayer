@@ -145,13 +145,13 @@ void EsDashPlayerController::InitializeVideoStream(
 
   if (s.description.content_protection) {  // DRM content detected
     LOG_INFO("DRM content detected.");
-    auto drm_listener = make_shared<DrmPlayReadyListener>(instance_, player_);
+    drm_listener_ = make_shared<DrmPlayReadyListener>(instance_, player_);
 
-    drm_listener->SetContentProtectionDescriptor(
+    drm_listener_->SetContentProtectionDescriptor(
         std::static_pointer_cast<DrmPlayReadyContentProtectionDescriptor>(
             s.description.content_protection));
 
-    player_->SetDRMListener(drm_listener);
+    player_->SetDRMListener(drm_listener_);
   }
 
   auto& stream_manager = streams_[static_cast<int32_t>(StreamType::Video)];
@@ -281,6 +281,9 @@ void EsDashPlayerController::Seek(TimeTicks original_time) {
   LOG_INFO("Requested seek to %f [s], adjusted time to keyframe at %f [s]",
            original_time, to_time);
 
+  if (drm_listener_)
+    drm_listener_->Reset();
+
   for (auto stream : streams_) {
     if (stream)
       stream->PrepareForSeek(to_time);
@@ -318,6 +321,9 @@ void EsDashPlayerController::ChangeRepresentation(StreamType stream_type,
 
 void EsDashPlayerController::OnChangeRepresentation(int32_t, StreamType type,
                                                      int32_t id) {
+  if (drm_listener_)
+    drm_listener_->Reset();
+
   shared_ptr<StreamManager>& stream_manager =
       streams_[static_cast<int32_t>(type)];
   stream_manager->SetMediaSegmentSequence(
@@ -343,7 +349,8 @@ void EsDashPlayerController::UpdateStreamsBuffer(int32_t) {
     }
   }
 
-  if (state_ == PlayerState::kReady) {
+  if (state_ == PlayerState::kReady &&
+      (!drm_listener_ || drm_listener_->IsInitialized())) {
     bool has_buffered_packets = packets_manager_.UpdateBuffer(
         current_playback_time);
 

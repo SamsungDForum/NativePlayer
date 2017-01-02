@@ -125,7 +125,7 @@ void AsyncDataProvider::DownloadNextSegmentOnOwnThread(
     MessageLoop destination_message_loop) {
   auto segment_duration = sequence_->SegmentDuration(segment_iterator);
   auto segment_timestamp = sequence_->SegmentTimestamp(segment_iterator);
-  LOG_INFO("Starting download for a segment: %f [s] ... %f [s]",
+  LOG_DEBUG("Starting download for a segment: %f [s] ... %f [s]",
       segment_timestamp, segment_timestamp + segment_duration);
   auto seg = MakeUnique<MediaSegment>();
 
@@ -135,7 +135,7 @@ void AsyncDataProvider::DownloadNextSegmentOnOwnThread(
   seg->timestamp_ = segment_timestamp;
 
   if (!DownloadSegment(*segment_iterator, &(seg->data_))) {
-    LOG_INFO("Download of a segment: %f [s] ... %f [s] was interrupted.",
+    LOG_DEBUG("Download of a segment: %f [s] ... %f [s] was interrupted.",
         segment_timestamp, segment_timestamp + segment_duration);
     return;
   }
@@ -143,7 +143,7 @@ void AsyncDataProvider::DownloadNextSegmentOnOwnThread(
 
   destination_message_loop.PostWork(cc_factory_.NewCallback(
       &AsyncDataProvider::PassResultOnCallerThread, seg.release()));
-  LOG_INFO("Finished download of a segment: %f [s] ... %f [s]",
+  LOG_DEBUG("Finished download of a segment: %f [s] ... %f [s]",
       segment_timestamp, segment_timestamp + segment_duration);
 }
 

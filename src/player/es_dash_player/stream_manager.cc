@@ -181,6 +181,7 @@ void StreamManager::Impl::PrepareForSeek(
     Samsung::NaClPlayer::TimeTicks new_position) {
   buffered_segments_time_ = 0.0;
   seeking_ = true;
+  drm_initialized_ = false;
   demuxer_.reset();
 }
 
@@ -392,7 +393,7 @@ void StreamManager::Impl::SetMediaSegmentSequence(
 
 void StreamManager::Impl::GotSegment(std::unique_ptr<MediaSegment> segment) {
   if (!segment->data_.empty()) {
-    LOG_INFO("Got %s segment. duration: %f, data size: %d, timestamp: %f [s]",
+    LOG_DEBUG("Got %s segment. duration: %f, data size: %d, timestamp: %f [s]",
         stream_type_ == StreamType::Video ? "VIDEO" : "AUDIO",
         segment->duration_, segment->data_.size(), segment->timestamp_);
   }

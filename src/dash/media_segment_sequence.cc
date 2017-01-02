@@ -123,7 +123,7 @@ bool DownloadSegment(dash::mpd::ISegment* seg, std::vector<uint8_t>* data) {
   if (!seg || !data) return false;
 
   dash::network::IChunk* chunk = static_cast<dash::network::IChunk*>(seg);
-  LOG_INFO("Downloading segment: %s%s%s", chunk->AbsoluteURI().c_str(),
+  LOG_DEBUG("Downloading segment: %s%s%s", chunk->AbsoluteURI().c_str(),
             chunk->HasByteRange() ? " Range: " : "",
             chunk->HasByteRange() ? chunk->Range().c_str() : "");
   auto request = GetRequestForURL(chunk->AbsoluteURI());

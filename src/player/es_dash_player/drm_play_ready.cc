@@ -39,7 +39,10 @@ const char* kXMLTag = "<?xml";
 DrmPlayReadyListener::DrmPlayReadyListener(
     const pp::InstanceHandle& instance,
     std::shared_ptr<Samsung::NaClPlayer::MediaPlayer> player)
-    : instance_(instance), cc_factory_(this), player_(player) {
+    : instance_(instance),
+      cc_factory_(this),
+      player_(player),
+      pending_licence_requests_(0) {
   side_thread_loop_ = pp::MessageLoop::GetCurrent();
 }
 
@@ -55,6 +58,8 @@ void DrmPlayReadyListener::OnInitdataLoaded(DRMType drm_type,
 void DrmPlayReadyListener::OnLicenseRequest(uint32_t request_size,
                                               const void* request) {
   LOG_DEBUG("request_size: %d, str: [%s]", request_size, request);
+
+  ++pending_licence_requests_;
 
   URLRequestInfo lic_request = GetRequestForURL(cp_descriptor_->system_url_);
   lic_request.SetMethod("POST");
@@ -91,8 +96,20 @@ void DrmPlayReadyListener::ProcessLicenseRequestOnSideThread(
     return;
   }
 
+  if (pending_licence_requests_)
+    --pending_licence_requests_;
+
   LOG_INFO("Successfully installed license.");
 }
+
+bool DrmPlayReadyListener::IsInitialized() const {
+  return pending_licence_requests_.load() == 0;
+}
+
+void DrmPlayReadyListener::Reset() {
+  pending_licence_requests_ = 0;
+}
+
 
 shared_ptr<ContentProtectionDescriptor>
 DrmPlayReadyContentProtectionVisitor::Visit(const vector<IDescriptor*>& cp) {

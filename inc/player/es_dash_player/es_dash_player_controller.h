@@ -30,6 +30,8 @@
 #include "player/player_listeners.h"
 #include "communicator/message_sender.h"
 
+class DrmPlayReadyListener;
+
 /// @file
 /// @brief This file defines the <code>EsDashPlayerController</code> class.
 
@@ -203,6 +205,7 @@ class EsDashPlayerController : public PlayerController,
 
   PlayerListeners listeners_;
 
+  std::shared_ptr<DrmPlayReadyListener> drm_listener_;
   std::shared_ptr<Samsung::NaClPlayer::ESDataSource> data_source_;
   std::shared_ptr<Samsung::NaClPlayer::MediaPlayer> player_;
   std::unique_ptr<Samsung::NaClPlayer::TextTrackInfo> text_track_;
