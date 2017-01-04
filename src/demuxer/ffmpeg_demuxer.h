@@ -38,7 +38,7 @@ class FFMpegDemuxer : public StreamDemuxer {
       const std::vector<uint8_t>& init_data)> DrmInitCallback;
 
   explicit FFMpegDemuxer(const pp::InstanceHandle& instance,
-                         uint32_t probe_size, Type type);
+                         uint32_t probe_size, Type type, InitMode init_mode);
   ~FFMpegDemuxer();
 
   bool Init(const InitCallback& callback,
@@ -113,6 +113,8 @@ class FFMpegDemuxer : public StreamDemuxer {
   bool exited_;
   uint32_t probe_size_;
   Samsung::NaClPlayer::TimeTicks timestamp_;
+  bool has_packets_;
+  InitMode init_mode_;
 };
 
 #endif  // SRC_PLAYER_ES_DASH_PLAYER_DEMUXER_FFMPEG_DEMUXER_H_

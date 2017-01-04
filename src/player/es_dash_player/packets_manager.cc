@@ -30,7 +30,8 @@ class BufferedPacket : public PacketsManager::BufferedStreamObject {
         packet_(std::move(packet)) {}
   ~BufferedPacket() override = default;
   bool Append(StreamManager* stream_manager) override {
-    return stream_manager->AppendPacket(std::move(packet_));
+    stream_manager->AppendPacket(std::move(packet_));
+    return false;
   }
   bool IsKeyFrame() const override {
     return packet_->IsKeyFrame();
@@ -231,7 +232,10 @@ void PacketsManager::AppendPackets(TimeTicks playback_time,
       // "pop top element from queue to local variable".
       const_cast<decltype(stream_object)&>(packets_.top()).swap(stream_object);
       packets_.pop();
-      stream_object->Append(streams_[stream_id].get());
+      // True means that we should break the loop and try again eg. audio/video
+      // config has change and we need some time to finish initialization
+      if (stream_object->Append(streams_[stream_id].get()))
+        break;
     } else {
       LOG_ERROR("Invalid stream index: %d", stream_id);
     }

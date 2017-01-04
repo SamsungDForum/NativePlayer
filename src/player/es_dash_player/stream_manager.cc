@@ -92,7 +92,7 @@ class StreamManager::Impl :
       Samsung::NaClPlayer::TimeTicks);
 
  private:
-  bool InitParser();
+  bool InitParser(StreamDemuxer::InitMode init_mode);
   bool ParseInitSegment();
   void GotSegment(std::unique_ptr<MediaSegment> segment);
 
@@ -171,7 +171,7 @@ void StreamManager::Impl::OnSeekData(TimeTicks new_position) {
     init_seek_ = true;
     return;
   }
-  if (InitParser()) {
+  if (InitParser(StreamDemuxer::kSkipInitCodecData)) {
     ParseInitSegment();
     stream_listener_->OnSeekData(stream_type_, new_position);
   }
@@ -269,7 +269,7 @@ bool StreamManager::Impl::Initialize(
   }
 
   // Initialize stream parser
-  if (!InitParser()) {
+  if (!InitParser(StreamDemuxer::kFullInitialization)) {
     LOG_ERROR("Failed to initialize parser or config listeners");
     return false;
   }
@@ -277,7 +277,7 @@ bool StreamManager::Impl::Initialize(
   return ParseInitSegment();
 }
 
-bool StreamManager::Impl::InitParser() {
+bool StreamManager::Impl::InitParser(StreamDemuxer::InitMode init_mode) {
   StreamDemuxer::Type demuxer_type;
   switch (stream_type_) {
     case StreamType::Video:
@@ -290,7 +290,7 @@ bool StreamManager::Impl::InitParser() {
       demuxer_type = StreamDemuxer::kUnknown;
   }
 
-  demuxer_ = StreamDemuxer::Create(instance_handle_, demuxer_type);
+  demuxer_ = StreamDemuxer::Create(instance_handle_, demuxer_type, init_mode);
 
   if (!demuxer_) {
     LOG_ERROR("Failed to construct a FFMpegStreamParser");
@@ -350,11 +350,10 @@ bool StreamManager::Impl::UpdateBuffer(TimeTicks playback_time) {
 
   // Check if we need to request next segment download.
   if (!segment_pending_) {
-    auto next_segment_threshold = data_provider_->AverageSegmentDuration();
-    if (next_segment_threshold <= kEps)
-        next_segment_threshold = kNextSegmentTimeThreshold;
+    auto next_segment_threshold = std::max(kNextSegmentTimeThreshold,
+        data_provider_->AverageSegmentDuration());
     if (buffered_segments_time_ - playback_time < next_segment_threshold) {
-      LOG_DEBUG("Requesting next %s segment...",
+      LOG_INFO("Requesting next %s segment...",
                 stream_type_ == StreamType::Video ? "VIDEO" : "AUDIO");
       bool has_more_segments = data_provider_->RequestNextDataSegment();
       if (has_more_segments) {
@@ -386,7 +385,7 @@ void StreamManager::Impl::SetMediaSegmentSequence(
   LOG_INFO("Parser reset");
   data_provider_->SetMediaSegmentSequence(std::move(segment_sequence),
       buffered_segments_time_ + kSegmentMargin);
-  if (InitParser()) ParseInitSegment();
+  if (InitParser(StreamDemuxer::kFullInitialization)) ParseInitSegment();
 
   LOG_DEBUG("SetMediaSegmentSequence changed segments in data provider");
 }
@@ -424,7 +423,7 @@ bool StreamManager::Impl::SetConfig(const AudioConfig& audio_config) {
       audio_config.sample_format, audio_config.bits_per_channel,
       audio_config.channel_layout, audio_config.samples_per_second);
 
-  if (audio_config_ == audio_config) {
+  if (seeking_ || audio_config_ == audio_config) {
     LOG_INFO("The same config as before");
     return true;
   }
@@ -448,8 +447,8 @@ bool StreamManager::Impl::SetConfig(const AudioConfig& audio_config) {
     if (ret == ErrorCodes::Success && !initialized_) {
       initialized_ = true;
       stream_configured_callback_(stream_type_);
-      return true;
     }
+    return ret == ErrorCodes::Success;
   } else {
     LOG_ERROR("This is not an audio stream manager!");
   }
@@ -463,7 +462,7 @@ bool StreamManager::Impl::SetConfig(const VideoConfig& video_config) {
       video_config.codec_type, video_config.codec_profile,
       video_config.frame_format, video_config.size.width,
       video_config.size.height);
-  if (video_config_ == video_config) {
+  if (seeking_ || video_config_ == video_config) {
     LOG_INFO("The same config as before");
     return true;
   }
@@ -486,8 +485,8 @@ bool StreamManager::Impl::SetConfig(const VideoConfig& video_config) {
     if (ret == ErrorCodes::Success && !initialized_) {
       initialized_ = true;
       stream_configured_callback_(stream_type_);
-      return true;
     }
+    return ret == ErrorCodes::Success;
   } else {
     LOG_ERROR("This is not a video stream manager!");
   }

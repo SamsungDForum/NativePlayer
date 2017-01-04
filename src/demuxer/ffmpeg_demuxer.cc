@@ -73,12 +73,14 @@ static bool SystemIdEqual(const uint8_t(&s0)[N], const uint8_t(&s1)[M]) {
 }
 
 unique_ptr<StreamDemuxer> StreamDemuxer::Create(
-    const pp::InstanceHandle& instance, Type type) {
+    const pp::InstanceHandle& instance, Type type, InitMode init_mode) {
   switch (type) {
     case kAudio:
-      return MakeUnique<FFMpegDemuxer>(instance, kAudioStreamProbeSize, type);
+      return MakeUnique<FFMpegDemuxer>(instance, kAudioStreamProbeSize, type,
+                                       init_mode);
     case kVideo:
-      return MakeUnique<FFMpegDemuxer>(instance, kVideoStreamProbeSize, type);
+      return MakeUnique<FFMpegDemuxer>(instance, kVideoStreamProbeSize, type,
+                                       init_mode);
     default:
       LOG_ERROR("ERROR - not supported type of stream");
   }
@@ -87,7 +89,7 @@ unique_ptr<StreamDemuxer> StreamDemuxer::Create(
 }
 
 FFMpegDemuxer::FFMpegDemuxer(const pp::InstanceHandle& instance,
-                             uint32_t probe_size, Type type)
+                             uint32_t probe_size, Type type, InitMode init_mode)
     : stream_type_(type),
       audio_stream_idx_(-1),
       video_stream_idx_(-1),
@@ -99,7 +101,9 @@ FFMpegDemuxer::FFMpegDemuxer(const pp::InstanceHandle& instance,
       end_of_file_(false),
       exited_(false),
       probe_size_(probe_size),
-      timestamp_(0.0) {
+      timestamp_(0.0),
+      has_packets_(false),
+      init_mode_(init_mode) {
   LOG_DEBUG("parser: %p", this);
 }
 
@@ -388,7 +392,7 @@ bool FFMpegDemuxer::InitStreamInfo() {
     streams_initialized_ = false;
   }
 
-  if (!streams_initialized_) {
+  if (!streams_initialized_ && init_mode_ != kSkipInitCodecData) {
     LOG_DEBUG("parsing stream info ctx = %p", format_context_);
     ret = avformat_find_stream_info(format_context_, NULL);
     LOG_DEBUG("find stream info ret %d", ret);
@@ -401,13 +405,13 @@ bool FFMpegDemuxer::InitStreamInfo() {
 
   audio_stream_idx_ =
       av_find_best_stream(format_context_, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
-  if (audio_stream_idx_ >= 0) {
+  if (audio_stream_idx_ >= 0 && init_mode_ != kSkipInitCodecData) {
     UpdateAudioConfig();
   }
 
   video_stream_idx_ =
       av_find_best_stream(format_context_, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
-  if (video_stream_idx_ >= 0) {
+  if (video_stream_idx_ >= 0 && init_mode_ != kSkipInitCodecData) {
     UpdateVideoConfig();
   }
 
@@ -605,20 +609,19 @@ unique_ptr<ElementaryStreamPacket> FFMpegDemuxer::MakeESPacketFromAVPacket(
   es_packet->SetDuration(ToTimeTicks(pkt->duration, s->time_base));
   es_packet->SetKeyFrame(pkt->flags == 1);
 
+  auto pts = ToTimeTicks(pkt->pts, s->time_base);
+  auto dts = ToTimeTicks(pkt->dts, s->time_base);
+  if (!has_packets_ && pts + kEps >= timestamp_) {
+      LOG_DEBUG("Got properly timestamped packet. Zero timestamp variable");
+      timestamp_ = 0;
+  }
+  has_packets_ = true;
+
+  es_packet->SetPts(pts + timestamp_);
+  es_packet->SetDts(dts + timestamp_);
+
   AVEncInfo* enc_info = reinterpret_cast<AVEncInfo*>(
       av_packet_get_side_data(pkt, AV_PKT_DATA_ENCRYPT_INFO, NULL));
-
-  // When parsing using Ffmpeg in version < 2.6.1 timestamp has to
-  // be added after each seek, to avoid playback problems.
-  // Version 2.6.1 of ffmpeg fixes that problem for unencrypted packets.
-  if (LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(56, 25, 101) || enc_info) {
-      es_packet->SetPts(ToTimeTicks(pkt->pts, s->time_base) + timestamp_);
-      es_packet->SetDts(ToTimeTicks(pkt->dts, s->time_base) + timestamp_);
-  } else {
-      es_packet->SetPts(ToTimeTicks(pkt->pts, s->time_base));
-      es_packet->SetDts(ToTimeTicks(pkt->dts, s->time_base));
-  }
-
   if (!enc_info) return es_packet;
 
   es_packet->SetKeyId(enc_info->kid, kKidLength);

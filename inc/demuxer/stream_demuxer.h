@@ -145,15 +145,24 @@ class StreamDemuxer {
     kVideoPkt = 5,
   };
 
+  /// @enum InitMode
+  /// Describes how <code>StreamDemuxer</code> should be initialized.
+  enum InitMode {
+    kFullInitialization = 0,
+    kSkipInitCodecData = 1,
+  };
+
   /// Creates <code>StreamDemuxer</code> for given StreamDemuxer::Type.
   /// @param[in] instance An <code>InstanceHandle</code> identifying
   /// Native Player object.
   /// @param[in] type A <code>StreamDemuxer::Type</code> identifying a type of
   /// requested to create <code>StreamDemuxer</code> to create.
+  /// @param[in] init_mode A <code>StreamDemuxer::InitMode</code> identifying
+  /// a demuxer initialization mode.
   ///
   /// @return StreamDemuxer constructed with given params.
   static std::unique_ptr<StreamDemuxer> Create(
-      const pp::InstanceHandle& instance, Type type);
+      const pp::InstanceHandle& instance, Type type, InitMode init_mode);
 
   /// Constructs an empty <code>StreamDemuxer</code>.
   StreamDemuxer() {}
