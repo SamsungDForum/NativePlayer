@@ -123,10 +123,22 @@ bool DownloadSegment(dash::mpd::ISegment* seg, std::vector<uint8_t>* data) {
   if (!seg || !data) return false;
 
   dash::network::IChunk* chunk = static_cast<dash::network::IChunk*>(seg);
-  LOG_DEBUG("Downloading segment: %s%s%s", chunk->AbsoluteURI().c_str(),
-            chunk->HasByteRange() ? " Range: " : "",
-            chunk->HasByteRange() ? chunk->Range().c_str() : "");
-  auto request = GetRequestForURL(chunk->AbsoluteURI());
+  // Quick fix for wrongly parsed MPDs
+  // Got url in following form:
+  //    "http://dash.akamaized.net/dash264/TestCasesMCA/dolby/1/1/"
+  //    "http://dash.akamaized.net/dash264/TestCasesMCA/dolby/1/1/"
+  //    "ChID_voices_51_256_ddp_A.mp4"
+  // and thus got 404 error.
+  std::string url = chunk->AbsoluteURI();
+  auto first_match = url.find("://");
+  auto last_match = url.rfind("://");
+  if (first_match != last_match)
+    url.erase(url.begin() + first_match, url.begin() + last_match);
+  LOG_INFO("Downloading segment: %s%s%s", url.c_str(),
+           chunk->HasByteRange() ? " Range: " : "",
+           chunk->HasByteRange() ? chunk->Range().c_str() : "");
+
+  auto request = GetRequestForURL(url);
   if (chunk->HasByteRange()) {
     std::ostringstream oss;
     oss << "Range: bytes=" << chunk->Range();

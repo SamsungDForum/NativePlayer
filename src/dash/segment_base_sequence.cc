@@ -44,6 +44,22 @@ uint8_t NextUnsigned<uint8_t>(const uint8_t*& stream) {
   return *stream++;
 }
 
+uint32_t FourCC(unsigned char a, unsigned char b,
+                unsigned char c, unsigned char d) {
+  uint32_t codes[] = { a, b, c, d };
+  uint32_t ret = 0;
+  for (auto code : codes) {
+    ret <<= 8;
+    ret |= code;
+  }
+  return ret;
+}
+
+std::string ToHttpRange(uint32_t data_begin, uint32_t data_size) {
+  return std::to_string(data_begin) + "-"
+      + std::to_string(data_begin + data_size - 1);
+}
+
 }  // namespace
 
 SegmentBaseSequence::SegmentBaseSequence(const RepresentationDescription& desc,
@@ -140,7 +156,7 @@ void SegmentBaseSequence::ParseSidx(const std::vector<uint8_t>& sidx,
   for (int i = 0; i < 3; ++i)  // flags
     static_cast<void>(NextUnsigned<uint8_t>(data));
   static_cast<void>(NextUnsigned<uint32_t>(data));  // reference_id
-  assert(sidx_end == sidx_begin + sidx_size - 1);
+  assert(sidx_end >= sidx_begin + sidx_size - 1);
 
   uint32_t timescale = NextUnsigned<uint32_t>(data);
   uint64_t pts = 0;
@@ -182,12 +198,49 @@ void SegmentBaseSequence::ParseSidx(const std::vector<uint8_t>& sidx,
   }
 }
 
+std::unique_ptr<dash::mpd::ISegment>
+SegmentBaseSequence::FindIndexSegmentInMp4() {
+  constexpr uint32_t kMovAtomBaseDataSize = 8;
+  auto segment = GetBaseSegment();
+  if (!segment) return nullptr;
+
+  std::vector<uint8_t> data;
+  uint32_t mov_atom_begin = 0;
+  bool is_mp4 = false;
+  while (true) {
+    segment->Range(ToHttpRange(mov_atom_begin, kMovAtomBaseDataSize));
+    segment->HasByteRange(true);
+
+    DownloadSegment(segment.get(), &data);
+    if (data.empty()) return nullptr;
+
+    const uint8_t* data_ptr = data.data();
+    uint32_t size = NextUnsigned<uint32_t>(data_ptr);
+    uint32_t four_cc = NextUnsigned<uint32_t>(data_ptr);
+
+    if (!is_mp4 && four_cc != FourCC('f', 't', 'y', 'p'))
+      return nullptr;
+
+    if (four_cc == FourCC('f', 't', 'y', 'p')) {
+      is_mp4 = true;
+    } else if (four_cc == FourCC('s', 'i', 'd', 'x')) {
+      segment->Range(ToHttpRange(mov_atom_begin, size));
+      segment->HasByteRange(true);
+      return segment;
+    }
+
+    mov_atom_begin += size;
+  }
+}
+
 void SegmentBaseSequence::LoadIndexSegment() {
   using dash::mpd::ISegment;
   using dash::network::IChunk;
   auto segment = GetRepresentationIndexSegment();
   if (!segment) segment = std::move(GetIndexSegment());
+  if (!segment) segment = std::move(FindIndexSegmentInMp4());
 
+  // No index segment
   if (!segment) return;
 
   std::vector<uint8_t> data;

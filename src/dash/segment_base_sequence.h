@@ -55,6 +55,7 @@ class SegmentBaseSequence : public MediaSegmentSequence {
  private:
   void ParseSidx(const std::vector<uint8_t>& sidx, uint64_t sidx_begin,
                  uint64_t sidx_end);
+  std::unique_ptr<dash::mpd::ISegment> FindIndexSegmentInMp4();
   void LoadIndexSegment();
   double Duration(uint32_t segment) const;
   double Timestamp(uint32_t segment) const;
