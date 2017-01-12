@@ -483,9 +483,6 @@ function onEnter() {
 }
 
 function sendSeek(to_time, from_current_time) {
-  if (!ui_enabled)
-    return;
-
   ui_enabled = false;
   if (subtitle_timeout)
     subtitle_timeout.execute();

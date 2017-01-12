@@ -88,6 +88,7 @@ class EsDashPlayerController : public PlayerController,
         instance_(instance),
         cc_factory_(this),
         subtitles_visible_(true),
+        seeking_(false),
         media_duration_(0.),
         message_sender_(message_sender),
         state_(PlayerState::kUnitialized) {}
@@ -208,6 +209,8 @@ class EsDashPlayerController : public PlayerController,
 
   void CleanPlayer();
 
+  void PerformWaitingOperations();
+
   pp::InstanceHandle instance_;
   std::unique_ptr<pp::SimpleThread> player_thread_;
   pp::CompletionCallbackFactory<EsDashPlayerController> cc_factory_;
@@ -220,6 +223,7 @@ class EsDashPlayerController : public PlayerController,
   std::unique_ptr<Samsung::NaClPlayer::TextTrackInfo> text_track_;
   std::vector<Samsung::NaClPlayer::TextTrackInfo> text_track_list_;
   bool subtitles_visible_;
+  bool seeking_;
   Samsung::NaClPlayer::TimeTicks media_duration_;
 
   std::shared_ptr<Communication::MessageSender> message_sender_;
@@ -233,6 +237,11 @@ class EsDashPlayerController : public PlayerController,
              static_cast<int32_t>(StreamType::MaxStreamTypes)> streams_;
   std::vector<VideoStream> video_representations_;
   std::vector<AudioStream> audio_representations_;
+
+  std::unique_ptr<Samsung::NaClPlayer::TimeTicks> waiting_seek_;
+  std::array<std::unique_ptr<int32_t>,
+             static_cast<size_t>(StreamType::MaxStreamTypes)>
+                 waiting_representation_changes_;
 
   std::string drm_license_url_;
   std::unordered_map<std::string, std::string> drm_key_request_properties_;

@@ -279,6 +279,11 @@ void EsDashPlayerController::CleanPlayer() {
 }
 
 void EsDashPlayerController::Seek(TimeTicks original_time) {
+  if (seeking_) {
+    waiting_seek_ = MakeUnique<TimeTicks>(original_time);
+    return;
+  }
+  seeking_ = true;
   // Seeking very close to media_duration_ will most likely place us after
   // last segment. kSegmentMargin is substracted  from media_duration_, which
   // will pretty reliable place us within the segment.
@@ -315,6 +320,13 @@ void EsDashPlayerController::Seek(TimeTicks original_time) {
 
 void EsDashPlayerController::OnSeek(int32_t ret) {
   if (ret == PP_OK) {
+    seeking_ = false;
+    if (waiting_seek_) {
+      auto waiting_seek = *waiting_seek_;
+      waiting_seek_.reset();
+      Seek(waiting_seek);
+      return;
+    }
     TimeTicks current_playback_time = 0.0;
     player_->GetCurrentTime(current_playback_time);
     LOG_INFO("After seek, time: %f, result: %d", current_playback_time, ret);
@@ -322,6 +334,7 @@ void EsDashPlayerController::OnSeek(int32_t ret) {
     LOG_ERROR("Seek failed with code: %d", ret);
   }
   message_sender_->BufferingCompleted();
+  PerformWaitingOperations();
 }
 
 void EsDashPlayerController::ChangeRepresentation(StreamType stream_type,
@@ -333,6 +346,12 @@ void EsDashPlayerController::ChangeRepresentation(StreamType stream_type,
 
 void EsDashPlayerController::OnChangeRepresentation(int32_t, StreamType type,
                                                      int32_t id) {
+  if (seeking_) {
+    waiting_representation_changes_[static_cast<size_t>(type)]
+        = MakeUnique<int32_t>(id);
+    return;
+  }
+
   if (drm_listener_)
     drm_listener_->Reset();
 
@@ -481,4 +500,14 @@ void EsDashPlayerController::OnChangeSubVisibility(int32_t, bool show) {
     player_->SetSubtitleListener(listeners_.subtitle_listener);
   else
     player_->SetSubtitleListener(nullptr);
+}
+
+void EsDashPlayerController::PerformWaitingOperations() {
+  for (size_t i = 0; i < waiting_representation_changes_.size(); ++i) {
+    if (waiting_representation_changes_[i]) {
+      OnChangeRepresentation(PP_OK, static_cast<StreamType>(i),
+                             *waiting_representation_changes_[i]);
+      waiting_representation_changes_[i].reset(nullptr);
+    }
+  }
 }
