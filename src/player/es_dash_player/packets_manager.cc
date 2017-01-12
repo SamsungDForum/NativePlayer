@@ -36,6 +36,9 @@ class BufferedPacket : public PacketsManager::BufferedStreamObject {
   bool IsKeyFrame() const override {
     return packet_->IsKeyFrame();
   }
+  bool IsConfig() const override {
+    return false;
+  }
  private:
    std::unique_ptr<ElementaryStreamPacket> packet_;
 };
@@ -53,6 +56,9 @@ class BufferedConfig : public PacketsManager::BufferedStreamObject {
   }
   bool IsKeyFrame() const override {
     return false;
+  }
+  bool IsConfig() const override {
+      return true;
   }
  private:
    ConfigT config_;
@@ -77,7 +83,22 @@ PacketsManager::~PacketsManager() = default;
 
 void PacketsManager::PrepareForSeek(Samsung::NaClPlayer::TimeTicks to_time) {
   pp::AutoLock critical_section(packets_lock_);
-  while (!packets_.empty()) packets_.pop();
+
+  // Append pending representation changes
+  BufferedStreamObjectPtr last_config;
+  while (!packets_.empty()) {
+    const auto& packet = packets_.top();
+    if (packet->IsConfig())
+      const_cast<decltype(last_config)&>(packets_.top()).swap(last_config);
+    packets_.pop();
+  }
+  if (last_config) {
+    auto stream_id = static_cast<int>(last_config->type());
+    if (streams_[stream_id]) {
+      last_config->Append(streams_[stream_id].get());
+    }
+  }
+
   // Stream managers will not send packets while they are seeking streams.
   // If streamManager sends packet, it means stream is at a new position. This
   // manager seek ends when it receives a keyframe packet for each stream.
@@ -195,6 +216,7 @@ void PacketsManager::CheckSeekEndConditions(
   // All packets before the one that ends seek must be dropped. It's worth
   // noting that all audio frames are keyframes.
   assert(seeking_);
+  BufferedStreamObjectPtr last_config;
   while (!packets_.empty()) {
     const auto& packet = packets_.top();
     auto packet_playback_position = packet->time();
@@ -210,9 +232,13 @@ void PacketsManager::CheckSeekEndConditions(
           packets_.size());
       break;
     } else {
+      if (packet->IsConfig())
+        const_cast<decltype(last_config)&>(packets_.top()).swap(last_config);
       packets_.pop();
     }
   }
+  if (last_config)
+    packets_.push(std::move(last_config));
 }
 
 void PacketsManager::AppendPackets(TimeTicks playback_time,

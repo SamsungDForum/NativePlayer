@@ -67,6 +67,7 @@ class PacketsManager : public StreamListener {
     virtual ~BufferedStreamObject();
     virtual bool Append(StreamManager*) = 0;
     virtual bool IsKeyFrame() const = 0;
+    virtual bool IsConfig() const = 0;
     StreamType type() const {
       return type_;
     }

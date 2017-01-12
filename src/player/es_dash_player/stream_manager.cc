@@ -172,7 +172,9 @@ void StreamManager::Impl::OnSeekData(TimeTicks new_position) {
     init_seek_ = true;
     return;
   }
-  if (InitParser(StreamDemuxer::kSkipInitCodecData)) {
+  if (InitParser(changing_representation_
+                 ? StreamDemuxer::kFullInitialization
+                 : StreamDemuxer::kSkipInitCodecData)) {
     ParseInitSegment();
     stream_listener_->OnSeekData(stream_type_, new_position);
   }
@@ -424,7 +426,7 @@ bool StreamManager::Impl::SetConfig(const AudioConfig& audio_config) {
       audio_config.sample_format, audio_config.bits_per_channel,
       audio_config.channel_layout, audio_config.samples_per_second);
 
-  if (seeking_ || audio_config_ == audio_config) {
+  if (audio_config_ == audio_config) {
     LOG_INFO("The same config as before");
     return true;
   }
@@ -463,7 +465,7 @@ bool StreamManager::Impl::SetConfig(const VideoConfig& video_config) {
       video_config.codec_type, video_config.codec_profile,
       video_config.frame_format, video_config.size.width,
       video_config.size.height);
-  if (seeking_ || video_config_ == video_config) {
+  if (video_config_ == video_config) {
     LOG_INFO("The same config as before");
     return true;
   }
