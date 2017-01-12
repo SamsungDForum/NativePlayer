@@ -44,9 +44,18 @@ class SegmentTemplateSequence : public MediaSegmentSequence {
   double AverageSegmentDuration() const override;
 
  private:
+  struct SegmentTimes {
+      SegmentTimes(uint64_t start_time, uint32_t duration)
+          : start_time_(start_time), duration_(duration){}
+      uint64_t start_time_;
+      uint32_t duration_;
+  };
+
   void ExtractSegmentDuration();
   void ExtractStartIndex();
-  double Duration(uint32_t) const { return segment_duration_; }
+  void CalculateSegmentStartTimes();
+
+  double Duration(uint32_t) const;
   double Timestamp(uint32_t index) const;
 
   // For use by iterators
@@ -60,6 +69,7 @@ class SegmentTemplateSequence : public MediaSegmentSequence {
   uint32_t start_index_;
   uint32_t end_index_;
   double segment_duration_;
+  std::vector<SegmentTimes> segment_start_times_;
 
   friend class SegmentTemplateIterator;
 };
