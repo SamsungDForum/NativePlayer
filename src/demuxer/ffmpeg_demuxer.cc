@@ -261,6 +261,11 @@ void FFMpegDemuxer::ParsingThreadFn() {
         LOG_ERROR("%s av_read_frame error: %d [%s], av_strerror ret: %d",
                   stream_type_ == StreamDemuxer::kVideo ? "VIDEO" : "AUDIO",
                   ret, errbuff, strerror_ret);
+
+        {
+          std::unique_lock<std::mutex> lock(buffer_mutex_);
+          if (exited_) finished_parsing = true;
+        }
       } else {
         finished_parsing = true;
       }

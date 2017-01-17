@@ -21,6 +21,9 @@
 
 namespace {
 
+constexpr uint32_t kMinBufferSize = 64 * 1024;
+constexpr uint32_t kExtendBufferSize = 256 * 1024;
+
 inline pp::InstanceHandle CurrentInstanceHandle() {
   pp::Module* module = pp::Module::Get();
   if (!module) return pp::InstanceHandle(static_cast<PP_Instance>(0));
@@ -51,7 +54,7 @@ int32_t ProcessURLRequest(const pp::URLRequestInfo& request, T* out) {
   pp::URLLoader loader(CurrentInstanceHandle());
   int32_t ret = loader.Open(request, pp::CompletionCallback());
   if (ret != PP_OK) {
-    LOG_ERROR("Failed to open URLLoader with license request, code: %d", ret);
+    LOG_ERROR("Failed to open URLLoader with given request, code: %d", ret);
     return ret;
   }
 
@@ -67,20 +70,33 @@ int32_t ProcessURLRequest(const pp::URLRequestInfo& request, T* out) {
     return PP_ERROR_FAILED;
   }
 
-  char buf[32 * 1024];
+  size_t bytes_received = 0;
   while (true) {
-    ret = loader.ReadResponseBody(buf, sizeof(buf), pp::CompletionCallback());
+    if (out->size() < bytes_received + kMinBufferSize)
+      out->resize(bytes_received + kExtendBufferSize);
+
+    if (out->size() <= bytes_received) {
+      out->clear();
+      LOG_ERROR("Failed to resize buffer");
+      return PP_ERROR_NOMEMORY;
+    }
+
+    size_t bytes_to_read = out->size() - bytes_received;
+    ret = loader.ReadResponseBody(&(*out)[bytes_received],
+                                  bytes_to_read,
+                                  pp::CompletionCallback());
     if (ret < 0) {
+      out->clear();
       LOG_ERROR("Failed to ReadResponseBody, result: %d", ret);
       return PP_ERROR_FAILED;
     }
 
     if (ret == PP_OK) break;
 
-    out->insert(out->end(), buf, buf + ret);
+    bytes_received += ret;
   }
 
-  loader.Close();
+  out->resize(bytes_received);
   return PP_OK;
 }
 
