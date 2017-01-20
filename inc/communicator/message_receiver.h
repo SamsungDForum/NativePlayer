@@ -203,6 +203,9 @@ class MessageReceiver : public pp::MessageHandler {
   /// @see kChangeSubtitlesVisibility
   void ChangeSubtitlesVisibility();
 
+  /// @public
+  void SetLogLevel(const pp::Var& level);
+
   std::shared_ptr<PlayerController> player_controller_;
   std::shared_ptr<PlayerProvider> player_provider_;
   Samsung::NaClPlayer::Rect view_rect_;

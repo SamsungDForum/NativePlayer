@@ -12,6 +12,7 @@
 
 #include "logger.h"
 
+#include <array>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string>
@@ -20,14 +21,33 @@
 #include "ppapi/cpp/instance.h"
 #include "ppapi/cpp/var.h"
 
-
 pp::Instance* Logger::instance_ = NULL;
-bool Logger::show_debug_ = false;
+LogLevel Logger::js_log_level_ = LogLevel::kNone;
+#ifdef DEBUG_LOGS
+LogLevel Logger::std_log_level_ = LogLevel::kInfo;
+#else
+LogLevel Logger::std_log_level_ = LogLevel::kNone;
+#endif
 
-const char* kInfoPrefix = "INFO: ";
-const char* kDebugPrefix = "DEBUG: ";
-const char* kErrorPrefix = "ERROR: ";
+namespace {
+
 const unsigned kMaxMessageSize = 256;
+
+const std::array<std::string, 4> kLogPrefixes = {{
+  "",         // LogLevel::kNone
+  "ERROR: ",  // LogLevel::kError
+  "INFO: ",   // LogLevel::kInfo
+  "DEBUG: ",  // LogLevel::kDebug
+}};
+
+const std::array<std::string, 4> kLogLevelColors = {{
+  "",          // LogLevel::kNone
+  "\033[31m",  // LogLevel::kError
+  "\033[32m",  // LogLevel::kInfo
+  "\033[32m",  // LogLevel::kDebug
+}};
+
+}  // anonymous namespace
 
 void Logger::InitializeInstance(pp::Instance* instance) {
   if (!instance_)
@@ -35,13 +55,13 @@ void Logger::InitializeInstance(pp::Instance* instance) {
 }
 
 void Logger::Info(const std::string& message) {
-  InternalPrint(kInfoPrefix, message);
+  InternalPrint(LogLevel::kInfo, message);
 }
 
 void Logger::Info(const char* message_format, ...) {
   va_list arguments_list;
   va_start(arguments_list, message_format);
-  InternalPrint(kInfoPrefix, message_format, arguments_list);
+  InternalPrint(LogLevel::kInfo, nullptr, message_format, arguments_list);
   va_end(arguments_list);
 }
 
@@ -49,18 +69,19 @@ void Logger::Info(int line, const char* func,const char* file,
     const char* message_format, ...)  {
   va_list arguments_list;
   va_start(arguments_list, message_format);
-  InternalPrint(line, func, file, kInfoPrefix, message_format, arguments_list);
+  InternalPrint(line, func, file, LogLevel::kInfo, message_format,
+                arguments_list);
   va_end(arguments_list);
 }
 
 void Logger::Error(const std::string& message) {
-  InternalPrint(kErrorPrefix, message);
+  InternalPrint(LogLevel::kError, message);
 }
 
 void Logger::Error(const char* message_format, ...) {
   va_list arguments_list;
   va_start(arguments_list, message_format);
-  InternalPrint(kErrorPrefix, message_format, arguments_list);
+  InternalPrint(LogLevel::kError, nullptr, message_format, arguments_list);
   va_end(arguments_list);
 }
 
@@ -68,80 +89,68 @@ void Logger::Error(int line, const char* func,const char* file,
     const char* message_format, ...)  {
   va_list arguments_list;
   va_start(arguments_list, message_format);
-  InternalPrint(line, func, file, kErrorPrefix, message_format, arguments_list);
+  InternalPrint(line, func, file, LogLevel::kError, message_format,
+                arguments_list);
   va_end(arguments_list);
 }
 
 void Logger::Debug(const std::string& message) {
-  if (!show_debug_)
-    return;
-  InternalPrint(kDebugPrefix, message);
+  InternalPrint(LogLevel::kDebug, message);
 }
 
 void Logger::Debug(const char* message_format, ...) {
-  if (!show_debug_)
-    return;
   va_list arguments_list;
   va_start(arguments_list, message_format);
-  InternalPrint(kDebugPrefix, message_format, arguments_list);
+  InternalPrint(LogLevel::kDebug, nullptr, message_format, arguments_list);
   va_end(arguments_list);
 }
 
 void Logger::Debug(int line, const char* func,const char* file,
     const char* message_format, ...)  {
-  if (!show_debug_)
-    return;
   va_list arguments_list;
   va_start(arguments_list, message_format);
-  InternalPrint(line, func, file, kDebugPrefix, message_format, arguments_list);
+  InternalPrint(line, func, file, LogLevel::kDebug, message_format,
+                arguments_list);
   va_end(arguments_list);
 }
 
-void Logger::EnableDebugLogs(bool flag) {
-  show_debug_ = flag;
+void Logger::SetJsLogLevel(LogLevel level) {
+  js_log_level_ = level;
 }
 
-void Logger::InternalPrint(const char* prefix, const std::string& message) {
-  if (instance_)
-    instance_->PostMessage(prefix + message + "\n");
-  if (prefix == kInfoPrefix)
-    INFO_POINT("%s", message.c_str());
-  else if (prefix == kDebugPrefix)
-    DEBUG_POINT("%s", message.c_str());
-  if (prefix == kErrorPrefix)
-    ERROR_POINT("%s", message.c_str());
+void Logger::SetStdLogLevel(LogLevel level) {
+  std_log_level_ = level;
 }
 
-void Logger::InternalPrint(const char* prefix, const char* message_format,
-                           va_list arguments_list) {
-  if (instance_) {
-    char buff[kMaxMessageSize];
-    std::string log_format = std::string(prefix) + message_format + "\n";
-    vsnprintf(buff, kMaxMessageSize, log_format.c_str(), arguments_list);
-    instance_->PostMessage(buff);
-    if (prefix == kInfoPrefix)
-      INFO_POINT("%s", buff);
-    else if (prefix == kDebugPrefix)
-      DEBUG_POINT("%s", buff);
-    if (prefix == kErrorPrefix)
-      ERROR_POINT("%s", buff);
-  }
+void Logger::InternalPrint(LogLevel level, const char* std_prefix,
+                           const char* message) {
+  if (instance_ && level <= js_log_level_)
+    instance_->PostMessage(
+        kLogPrefixes[static_cast<int>(level)] + message + "\n");
+  if (level > std_log_level_)
+    return;
+  printf("%s%s%s%s\033[0m\n", kLogLevelColors[static_cast<int>(level)].c_str(),
+         std_prefix ? std_prefix : "",
+         kLogPrefixes[static_cast<int>(level)].c_str(), message);
+  fflush(stdout);
+}
+
+void Logger::InternalPrint(LogLevel level, const char* std_prefix,
+                           const char* message_format, va_list arguments_list) {
+  if (!IsLoggingEnabled())
+    return;
+  char buff[kMaxMessageSize];
+  vsnprintf(buff, kMaxMessageSize, message_format, arguments_list);
+  InternalPrint(level, std_prefix, buff);
 }
 
 void Logger::InternalPrint(int line, const char* func, const char* file,
-                          const char* prefix, const char* message_format,
+                          LogLevel level, const char* message_format,
                           va_list arguments_list) {
-  if (instance_) {
-    char buff[kMaxMessageSize];
-    std::string log_format = std::string(prefix) + message_format + "\n";
-    vsnprintf(buff, kMaxMessageSize, log_format.c_str(), arguments_list);
-    const char* file_basename = basename(const_cast<char*>(file));
-    instance_->PostMessage(buff);
-    if (prefix == kInfoPrefix)
-      INFO_POINT("[%s/%s:%d] %s", file_basename, func, line, buff);
-    else if (prefix == kDebugPrefix)
-      DEBUG_POINT("[%s/%s:%d] %s", file_basename, func, line, buff);
-    if (prefix == kErrorPrefix)
-      ERROR_POINT("[%s/%s:%d] %s", file_basename, func, line, buff);
-  }
+  if (!IsLoggingEnabled())
+    return;
+  char buff[kMaxMessageSize];
+  const char* file_basename = basename(const_cast<char*>(file));
+  snprintf(buff, kMaxMessageSize, "[%s/%s:%d] ", file_basename, func, line);
+  InternalPrint(level, buff, message_format, arguments_list);
 }

@@ -18,27 +18,15 @@
 
 #include "ppapi/cpp/instance.h"
 
-#ifdef DEBUG_LOGS
-#define INFO_POINT(format, ...) do { \
-  printf("\033[32m" format "\033[0m", \
-   ##__VA_ARGS__); \
-  fflush(stdout); \
-} while (0)
-#define DEBUG_POINT(format, ...) do { \
-  printf("\033[33m" format "\033[0m", \
-  ##__VA_ARGS__); \
-  fflush(stdout); \
-} while (0)
-#define ERROR_POINT(format, ...) do { \
-  printf("\033[31m" format "\033[0m", \
-  ##__VA_ARGS__); \
-  fflush(stdout); \
-} while (0)
-#else
-#define INFO_POINT(format, ...) /* */
-#define DEBUG_POINT(format, ...) /* */
-#define ERROR_POINT(format, ...) /* */
-#endif
+enum class LogLevel {
+  kNone = 0,
+  kError,
+  kInfo,
+  kDebug,
+
+  kMinLevel = kNone,
+  kMaxLevel = kDebug,
+};
 
 /**
  * Utility class that simplifies sending log messages by PostMessage to JS.
@@ -66,7 +54,7 @@ class Logger {
 
   /**
    * Does the same as Log(const char* message_format, ...),
-   * but takes also arguments to provide info from where it was called
+   * but also takes arguments to provide info from where it was called.
    */
   static void Info(int line, const char* func,const char* file,
       const char* message_format, ...);
@@ -79,9 +67,7 @@ class Logger {
       const char* message_format, ...);
 
   /**
-   * Similar to Error and Log, but with debug prefix. These logs are disabled
-   * by default. <code>EnableDebugLogs(true)</code> must be called to show these
-   * logs.
+   * Similar to Error and Log, but with debug prefix.
    */
   static void Debug(const std::string& message);
   static void Debug(const char* message_format, ...);
@@ -89,25 +75,38 @@ class Logger {
       const char* message_format, ...);
 
   /**
-   * Enables logs sent by <code>Debug</code> methods if passed <code>flag</code>
-   * is true. Disables debug logs when <code>flag</code> is false.
-   * By default debug logs are disabled.
+   * Change a level of logs that will be sent to JS.
    */
-  static void EnableDebugLogs(bool flag);
+  static void SetJsLogLevel(LogLevel level);
+
+   /**
+   * Change a level of logs that will be sent to stdout.
+   */
+  static void SetStdLogLevel(LogLevel level);
 
  private:
   /**
    * Internal wrappers for printing to PostMessage with specified prefix.
    */
-  static void InternalPrint(const char* prefix, const std::string& message);
-  static void InternalPrint(const char* prefix, const char* message_format,
-                            va_list arguments_list);
+  static void InternalPrint(LogLevel, const char* std_prefix,
+                            const char* message);
+  static void InternalPrint(LogLevel, const char* std_prefix,
+                            const char* message_format, va_list arguments_list);
   static void InternalPrint(int line, const char* func, const char* file,
-                            const char* prefix, const char* message_format,
+                            LogLevel, const char* message_format,
                             va_list arguments_list);
+  static void InternalPrint(LogLevel level, const std::string& message) {
+    InternalPrint(level, nullptr, message.c_str());
+  }
+
+  static bool IsLoggingEnabled() {
+    return std_log_level_ != LogLevel::kNone ||
+           js_log_level_ != LogLevel::kNone;
+  }
 
   static pp::Instance* instance_;
-  static bool show_debug_;
+  static LogLevel js_log_level_;
+  static LogLevel std_log_level_;
 };
 
 #endif  // COMMON_SRC_LOGGER_H_

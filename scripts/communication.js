@@ -98,6 +98,7 @@ var MessageToPlayerEnum = {
   kChangeRepresentation : 5,
   kChangeSubtitlesRepresentation : 7,
   kChangeSubtitlesVisibility : 8,
+  kSetLogLevel : 90,
 };
 
 var MessageFromPlayerEnum = {
@@ -578,4 +579,12 @@ function onFullscreenClick() {
     document.getElementById('listener').removeEventListener(
         'mousemove', keyHandler);
   }
+}
+
+function updateLogLevel(level) {
+  logs_level = level;
+  nacl_module.postMessage(
+      {'messageToPlayer': MessageToPlayerEnum.kSetLogLevel,
+       'level': logs_level});
+
 }

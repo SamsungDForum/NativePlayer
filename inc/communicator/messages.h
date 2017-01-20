@@ -90,6 +90,12 @@ enum MessageToPlayer {
   /// @param (int)kKeyWidth A width of the players window.
   /// @param (int)kKeyHeight A height of the players window.
   kChangeViewRect = 9,
+
+  /// Set a log level.
+  /// @param (int)New log level. A value from the LogLevel enum.
+  /// @see logger.h
+  /// @see enum class LogLevel
+  kSetLogLevel = 90,
 };
 
 /// @enum MessageFromPlayer
@@ -252,6 +258,11 @@ const std::string kKeyXCoordination = "x_coordinate";
 /// A string value used in messages as a <code>VarDictionary</code> key.
 /// This key maps to an <code>int</code>type value.
 const std::string kKeyYCoordination = "y_coordinate";
+
+/// A string value used in messages as a <code>VarDictionary</code> key.
+/// This key maps to an <code>int</code>type value corresponding to a LogLevel
+/// enum value.
+const std::string kKeyLogLevel = "level";
 
 }  // namespace Communication
 

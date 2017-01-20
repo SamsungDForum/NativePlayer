@@ -50,7 +50,7 @@ bool NativePlayer::Init(uint32_t argc, const char** argn, const char** argv) {
   LOG_INFO("Start Init");
   for (uint32_t i = 0; i < argc; i++) {
     if (strcmp(argn[i], kLogCmd) == 0 && strcmp(argv[i], kLogDebug) == 0)
-      Logger::EnableDebugLogs(true);
+      Logger::SetStdLogLevel(LogLevel::kDebug);
   }
 
   std::shared_ptr<Communication::MessageSender> ui_message_sender =

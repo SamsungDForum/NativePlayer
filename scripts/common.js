@@ -7,11 +7,16 @@
  * @brief Common NaCl application page configuration.
  */
 
-var logs;
-var logs_level;
-if (typeof logs_level === "undefined") {
-  logs_level = "info";
+var LogLevelEnum = {
+  kNone : 0,
+  kError : 1,
+  kInfo : 2,
+  kDebug : 3,
 }
+
+var logs;
+logs_level = LogLevelEnum.kError;
+
 var kInfoPrefix = "INFO:";
 var kErrorPrefix = "ERROR:";
 var kDebugPrefix = "DEBUG:";
@@ -60,6 +65,7 @@ function handleNaclCrash(event) {
 
 function handleNaclLoad(event) {
   updateStatus("Loaded successfully.");
+  updateLogLevel(LogLevelEnum.kError);
   if (typeof(exampleSpecificActionAfterNaclLoad) == "function") {
     exampleSpecificActionAfterNaclLoad();
   }

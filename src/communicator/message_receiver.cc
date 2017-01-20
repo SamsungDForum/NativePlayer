@@ -9,6 +9,7 @@
 
 #include "communicator/message_receiver.h"
 
+#include <algorithm>
 #include <unordered_map>
 #include <string>
 
@@ -20,6 +21,14 @@
 using pp::Var;
 using pp::VarArray;
 using pp::VarDictionary;
+
+namespace {
+
+inline int32_t ClipToRange(int32_t value, int32_t min, int32_t max) {
+  return std::max(min, std::min(value, max));
+}
+
+}  // anonymous namespace
 
 namespace Communication {
 
@@ -78,6 +87,9 @@ void MessageReceiver::HandleMessage(pp::InstanceHandle /*instance*/,
                      msg.Get(kKeyYCoordination),
                      msg.Get(kKeyWidth),
                      msg.Get(kKeyHeight));
+      break;
+    case MessageToPlayer::kSetLogLevel:
+      SetLogLevel(msg.Get(kKeyLogLevel));
       break;
     default:
       LOG_ERROR("Not supported action code!");
@@ -185,6 +197,15 @@ void MessageReceiver::ChangeSubtitlesRepresentation(const pp::Var& id) {
 void MessageReceiver::ChangeSubtitlesVisibility() {
   if (player_controller_)
     player_controller_->ChangeSubtitleVisibility();
+}
+
+void MessageReceiver::SetLogLevel(const pp::Var& pp_level) {
+  if (!pp_level.is_int())
+    return;
+  auto level = ClipToRange(pp_level.AsInt(),
+                           static_cast<int32_t>(LogLevel::kMinLevel),
+                           static_cast<int32_t>(LogLevel::kMaxLevel));
+  Logger::SetJsLogLevel(static_cast<LogLevel>(level));
 }
 
 }  // namespace Communication
