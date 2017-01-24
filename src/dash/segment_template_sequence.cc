@@ -101,17 +101,16 @@ SegmentTemplateSequence::GetMediaSegmentFromNumber(uint32_t number) const {
   if (number < start_index_ || number > end_index_)
     return nullptr;
 
-  number -= start_index_;  // passed index is not always zero-based
-
   dash::mpd::ISegment *segment = nullptr;
   if (segment_template_->GetSegmentTimeline()) {
+    number -= start_index_;  // passed index is not always zero-based
+
     if (number < segment_start_times_.size()) {
       auto start_time = segment_start_times_.at(number).start_time_;
       segment = segment_template_->GetMediaSegmentFromTime(
           base_urls_, rep_id_, bandwidth_, start_time);
     }
-  }
-  else {
+  } else {
     segment = segment_template_->GetMediaSegmentFromNumber(
         base_urls_, rep_id_, bandwidth_, number);
   }
