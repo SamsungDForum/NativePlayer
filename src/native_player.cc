@@ -53,6 +53,9 @@ bool NativePlayer::Init(uint32_t argc, const char** argn, const char** argv) {
       Logger::SetStdLogLevel(LogLevel::kDebug);
   }
 
+  // Prevents showing on-screen keyboard in Tizen 3.0
+  text_input_controller_.SetTextInputType(PP_TEXTINPUT_TYPE_NONE);
+
   std::shared_ptr<Communication::MessageSender> ui_message_sender =
       std::make_shared<Communication::MessageSender>(this);
 
