@@ -30,8 +30,7 @@ class BufferedPacket : public PacketsManager::BufferedStreamObject {
         packet_(std::move(packet)) {}
   ~BufferedPacket() override = default;
   bool Append(StreamManager* stream_manager) override {
-    stream_manager->AppendPacket(std::move(packet_));
-    return false;
+    return !stream_manager->AppendPacket(std::move(packet_));
   }
   bool IsKeyFrame() const override {
     return packet_->IsKeyFrame();
