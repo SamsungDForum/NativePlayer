@@ -246,6 +246,7 @@ void EsDashPlayerController::Play() {
   int32_t ret = player_->Play();
   if (ret == ErrorCodes::Success) {
     LOG_INFO("Play called successfully");
+    state_ = PlayerState::kPlaying;
   } else {
     LOG_ERROR("Play call failed, code: %d", ret);
   }
@@ -260,6 +261,7 @@ void EsDashPlayerController::Pause() {
   int32_t ret = player_->Pause();
   if (ret == ErrorCodes::Success) {
     LOG_INFO("Pause called successfully");
+    state_ = PlayerState::kPaused;
   } else {
     LOG_ERROR("Pause call failed, code: %d", ret);
   }
@@ -369,7 +371,11 @@ void EsDashPlayerController::UpdateStreamsBuffer(int32_t) {
     return;
   }
 
-  player_->GetCurrentTime(current_playback_time);
+  if (static_cast<int>(state_) > static_cast<int>(PlayerState::kReady)) {
+    player_->GetCurrentTime(current_playback_time);
+  } else {
+    current_playback_time = 0.;
+  }
   LOG_DEBUG("Current time: %f [s]", current_playback_time);
 
   bool segments_pending = false;
@@ -380,7 +386,7 @@ void EsDashPlayerController::UpdateStreamsBuffer(int32_t) {
     }
   }
 
-  if (state_ == PlayerState::kReady &&
+  if (static_cast<int>(state_) >= static_cast<int>(PlayerState::kReady) &&
       (!drm_listener_ || drm_listener_->IsInitialized())) {
     bool has_buffered_packets = packets_manager_.UpdateBuffer(
         current_playback_time);
@@ -473,7 +479,8 @@ void EsDashPlayerController::FinishStreamConfiguration() {
   int32_t result = player_->AttachDataSource(*data_source_);
 
   if (result == ErrorCodes::Success && state_ != PlayerState::kError) {
-    state_ = PlayerState::kReady;
+    if (state_ == PlayerState::kUnitialized)
+      state_ = PlayerState::kReady;
     LOG_INFO("Data Source attached");
   } else {
     state_ = PlayerState::kError;

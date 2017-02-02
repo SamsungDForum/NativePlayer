@@ -25,7 +25,7 @@ class PlayerController {
  public:
   /// @enum PlayerState
   /// Enum which defines <code>PlayerController</code> possible states.
-  enum class PlayerState {
+  enum class PlayerState : int32_t {
     /// In this state <code>PlayerController</code> is not ready to use. This
     /// state is set right after creation.
     kUnitialized,
@@ -42,7 +42,7 @@ class PlayerController {
 
     /// This state means that <code>PlayerController</code> has caught an error
     /// and playback is not possible.
-    kError
+    kError = -1
   };
 
   /// Creates a <code>PlayerController</code> object.
