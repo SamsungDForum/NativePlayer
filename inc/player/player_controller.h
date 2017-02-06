@@ -40,6 +40,10 @@ class PlayerController {
     /// In this state <code>PlayerController</code> plays the content.
     kPlaying,
 
+    /// In this state <code>PlayerController</code> finished playing the content
+    /// and can't append more packets.
+    kFinished,
+
     /// This state means that <code>PlayerController</code> has caught an error
     /// and playback is not possible.
     kError = -1

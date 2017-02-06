@@ -281,6 +281,10 @@ void EsDashPlayerController::CleanPlayer() {
 }
 
 void EsDashPlayerController::Seek(TimeTicks original_time) {
+  if (state_ == PlayerState::kFinished) {
+    LOG_INFO("Playback ended. Dropping seek to %f", original_time);
+    return;
+  }
   if (seeking_) {
     waiting_seek_ = MakeUnique<TimeTicks>(original_time);
     return;
@@ -392,13 +396,15 @@ void EsDashPlayerController::UpdateStreamsBuffer(int32_t) {
         current_playback_time);
 
     // All streams reached EOS:
-    if (!segments_pending && !has_buffered_packets &&
+    if (!waiting_seek_ && !segments_pending && !has_buffered_packets &&
         packets_manager_.IsEosReached()) {
       int32_t ret = data_source_->SetEndOfStream();
-      if (ret == ErrorCodes::Success)
+      if (ret == ErrorCodes::Success) {
+        state_ = PlayerState::kFinished;
         LOG_INFO("End of stream signalized from all streams, set EOS - OK");
-      else
+      } else {
         LOG_ERROR("Failed to signalize end of stream to ESDataSource");
+      }
       return;
     }
   }
