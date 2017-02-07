@@ -46,7 +46,38 @@ using std::shared_ptr;
 using std::unique_ptr;
 using std::vector;
 
+namespace {
+
 const TimeTicks kNextSegmentTimeThreshold = 7.0f;    // in seconds
+
+// This class breaks circular shared pointer dependency between:
+//    StreamManager
+// -> StreamManager::Impl
+// -> Samsung::NaClPlayer::ElementaryStream
+// -> Samsung::NaClPlayer::ElementaryStreamListener (which is StreamManager)
+// TODO(p.balut): Code should be refactored so that this class can be removed.
+class StreamListenerProxy : public ElementaryStreamListener {
+ public:
+  explicit StreamListenerProxy(ElementaryStreamListener* listener)
+      : listener_(listener) {
+  }
+
+  void OnNeedData(int32_t bytes_max) override {
+    listener_->OnNeedData(bytes_max);
+  }
+
+  void OnEnoughData() override {
+    listener_->OnEnoughData();
+  }
+
+  void OnSeekData(TimeTicks new_position) override {
+    listener_->OnSeekData(new_position);
+  }
+ private:
+  ElementaryStreamListener* listener_;
+};
+
+}  // anonymous namespace
 
 class StreamManager::Impl :
     public std::enable_shared_from_this<StreamManager::Impl> {
@@ -55,7 +86,7 @@ class StreamManager::Impl :
   ~Impl();
   bool Initialize(
        std::unique_ptr<MediaSegmentSequence> segment_sequence,
-       std::shared_ptr<Samsung::NaClPlayer::ESDataSource> es_data_source,
+       ESDataSource* es_data_source,
        std::function<void(StreamType)> stream_configured_callback,
        std::function<void(StreamDemuxer::Message,
                           unique_ptr<ElementaryStreamPacket>)>
@@ -224,7 +255,7 @@ bool StreamManager::Impl::AppendPacket(
 
 bool StreamManager::Impl::Initialize(
     unique_ptr<MediaSegmentSequence> segment_sequence,
-    shared_ptr<ESDataSource> es_data_source,
+    ESDataSource* es_data_source,
     std::function<void(StreamType)> stream_configured_callback,
     std::function<void(StreamDemuxer::Message,
                        unique_ptr<ElementaryStreamPacket>)>
@@ -241,8 +272,9 @@ bool StreamManager::Impl::Initialize(
   es_packet_callback_ = es_packet_callback;
   stream_listener_ = stream_listener;
   drm_type_ = drm_type;
-  auto callback = WeakBind(&StreamManager::Impl::GotSegment,
-      shared_from_this(), _1);
+  auto callback = [this](std::unique_ptr<MediaSegment> segment) {
+    GotSegment(std::move(segment));
+  };
   data_provider_ = MakeUnique<AsyncDataProvider>(
       instance_handle_, callback);
   data_provider_->SetMediaSegmentSequence(std::move(segment_sequence));
@@ -302,20 +334,20 @@ bool StreamManager::Impl::InitParser(StreamDemuxer::InitMode init_mode) {
   if (!demuxer_->Init(es_packet_callback_, pp::MessageLoop::GetCurrent()))
     return false;
 
-  bool ok = demuxer_->SetAudioConfigListener(
-                WeakBind(&StreamManager::Impl::OnAudioConfig,
-                          shared_from_this(), _1));
+  bool ok = demuxer_->SetAudioConfigListener([this](const AudioConfig& config) {
+      OnAudioConfig(config);
+  });
 
-  ok = ok &&
-       demuxer_->SetVideoConfigListener(
-           WeakBind(&StreamManager::Impl::OnVideoConfig,
-                     shared_from_this(), _1));
+  ok = ok && demuxer_->SetVideoConfigListener([this](
+      const VideoConfig& config) {
+    OnVideoConfig(config);
+  });
 
   if (drm_type_ != DRMType_Unknown) {
-    ok = ok &&
-         demuxer_->SetDRMInitDataListener(
-             WeakBind(&StreamManager::Impl::OnDRMInitData,
-                       shared_from_this(), _1, _2));
+    ok = ok && demuxer_->SetDRMInitDataListener([this](
+        const std::string& type, const std::vector<uint8_t>& init_data) {
+      OnDRMInitData(type, init_data);
+    });
   }
   return ok;
 }
@@ -527,11 +559,10 @@ void StreamManager::Impl::OnDRMInitData(const std::string& type,
 // end of PIMPL implementation
 
 StreamManager::StreamManager(pp::InstanceHandle instance, StreamType type)
-  :pimpl_(MakeUnique<Impl>(instance, type)) {
+  : pimpl_(MakeUnique<Impl>(instance, type)) {
 }
 
-StreamManager::~StreamManager() {
-}
+StreamManager::~StreamManager() = default;
 
 void StreamManager::OnNeedData(int32_t bytes_max) {
   pimpl_->OnNeedData(bytes_max);
@@ -584,7 +615,7 @@ Samsung::NaClPlayer::TimeTicks StreamManager::GetClosestKeyframeTime(
 
 bool StreamManager::Initialize(
     unique_ptr<MediaSegmentSequence> segment_sequence,
-    shared_ptr<ESDataSource> es_data_source,
+    ESDataSource* es_data_source,
     std::function<void(StreamType)> stream_configured_callback,
     std::function<void(StreamDemuxer::Message,
                        unique_ptr<ElementaryStreamPacket>)>
@@ -593,7 +624,8 @@ bool StreamManager::Initialize(
     DRMType drm_type) {
   return pimpl_->Initialize(std::move(segment_sequence), es_data_source,
                             stream_configured_callback, es_packet_callback,
-                            stream_listener, drm_type, shared_from_this());
+                            stream_listener, drm_type,
+                            std::make_shared<StreamListenerProxy>(this));
 }
 
 void StreamManager::SetDrmInitData(const std::string& type,

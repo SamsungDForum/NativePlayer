@@ -100,7 +100,7 @@ void PacketsManager::PrepareForSeek(Samsung::NaClPlayer::TimeTicks to_time) {
   if (last_config) {
     auto stream_id = static_cast<int>(last_config->type());
     if (streams_[stream_id]) {
-      last_config->Append(streams_[stream_id].get());
+      last_config->Append(streams_[stream_id]);
     }
   }
 
@@ -274,7 +274,7 @@ void PacketsManager::AppendPackets(TimeTicks playback_time,
       packets_.pop();
       // True means that we should break the loop and try again eg. audio/video
       // config has change and we need some time to finish initialization
-      if (stream_object->Append(streams_[stream_id].get()))
+      if (stream_object->Append(streams_[stream_id]))
         break;
     } else {
       LOG_ERROR("Invalid stream index: %d", stream_id);
@@ -286,7 +286,7 @@ void PacketsManager::AppendPackets(TimeTicks playback_time,
 
 bool PacketsManager::IsEosSignalled() const {
   int stream_count = 0;
-  for (const auto& stream : streams_) {
+  for (auto stream : streams_) {
     if (stream)
       ++stream_count;
   }
@@ -325,8 +325,7 @@ bool PacketsManager::UpdateBuffer(
   return !packets_.empty();
 }
 
-void PacketsManager::SetStream(StreamType type,
-                               std::shared_ptr<StreamManager> manager) {
+void PacketsManager::SetStream(StreamType type, StreamManager* manager) {
   assert(type < StreamType::MaxStreamTypes);
-  streams_[static_cast<int32_t>(type)] = std::move(manager);
+  streams_[static_cast<int32_t>(type)] = manager;
 }

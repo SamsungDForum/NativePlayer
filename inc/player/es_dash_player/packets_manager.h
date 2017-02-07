@@ -43,7 +43,7 @@ class PacketsManager : public StreamListener {
   void OnEsPacket(StreamDemuxer::Message,
                   std::unique_ptr<ElementaryStreamPacket>);
   bool UpdateBuffer(Samsung::NaClPlayer::TimeTicks playback_time);
-  void SetStream(StreamType type, std::shared_ptr<StreamManager> manager);
+  void SetStream(StreamType type, StreamManager* manager);
 
   void OnStreamConfig(const AudioConfig&) override;
   void OnStreamConfig(const VideoConfig&) override;
@@ -199,7 +199,9 @@ class PacketsManager : public StreamListener {
              static_cast<int32_t>(StreamType::MaxStreamTypes)>
                  buffered_packets_timestamp_;
 
-  std::array<std::shared_ptr<StreamManager>,
+  // Non-owning pointers managed by parent. They are bound to be valid as long
+  // as they are set.
+  std::array<StreamManager*,
              static_cast<int32_t>(StreamType::MaxStreamTypes)> streams_;
 };
 

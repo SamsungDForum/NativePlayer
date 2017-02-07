@@ -98,7 +98,7 @@ class EsDashPlayerController::Impl {
     }
 
     auto& stream_manager = thiz->streams_[static_cast<int32_t>(type)];
-    stream_manager = make_shared<StreamManager>(thiz->instance_, type);
+    stream_manager = MakeUnique<StreamManager>(thiz->instance_, type);
     auto configured_callback = WeakBind(
         &EsDashPlayerController::OnStreamConfigured,
         std::static_pointer_cast<EsDashPlayerController>(
@@ -112,9 +112,9 @@ class EsDashPlayerController::Impl {
     bool success = stream_manager->Initialize(
         thiz->dash_parser_->GetSequence(
             static_cast<MediaStreamType>(type), s.description.id),
-        thiz->data_source_, configured_callback, es_packet_callback,
+        thiz->data_source_.get(), configured_callback, es_packet_callback,
         &thiz->packets_manager_, drm_type);
-    thiz->packets_manager_.SetStream(type, stream_manager);
+    thiz->packets_manager_.SetStream(type, stream_manager.get());
 
     if (s.description.content_protection) {
       auto play_ready_desc =
@@ -207,7 +207,8 @@ void EsDashPlayerController::InitializeDash(int32_t,
   }
   data_source_ = es_data_source;
   media_duration_ = duration;
-  streams_.fill({});
+  for (auto& stream : streams_)
+    stream.reset();
   video_representations_ = dash_parser_->GetVideoStreams();
   audio_representations_ = dash_parser_->GetAudioStreams();
 
@@ -269,11 +270,16 @@ void EsDashPlayerController::Pause() {
 
 void EsDashPlayerController::CleanPlayer() {
   LOG_INFO("Cleaning player.");
-  if (player_) return;
+  if (!player_) return;
   player_thread_.reset();
   data_source_.reset();
   dash_parser_.reset();
-  streams_.fill({});
+  text_track_.reset();
+  player_.reset();
+  packets_manager_.SetStream(StreamType::Audio, nullptr);
+  packets_manager_.SetStream(StreamType::Video, nullptr);
+  for (auto& stream : streams_)
+    stream.reset();
   state_ = PlayerState::kUnitialized;
   video_representations_.clear();
   audio_representations_.clear();
@@ -307,7 +313,7 @@ void EsDashPlayerController::Seek(TimeTicks original_time) {
   if (drm_listener_)
     drm_listener_->Reset();
 
-  for (auto stream : streams_) {
+  for (const auto& stream : streams_) {
     if (stream)
       stream->PrepareForSeek(to_time);
   }
@@ -361,7 +367,7 @@ void EsDashPlayerController::OnChangeRepresentation(int32_t, StreamType type,
   if (drm_listener_)
     drm_listener_->Reset();
 
-  shared_ptr<StreamManager>& stream_manager =
+  const auto& stream_manager =
       streams_[static_cast<int32_t>(type)];
   stream_manager->SetMediaSegmentSequence(
       dash_parser_->GetSequence(static_cast<MediaStreamType>(type), id));
@@ -384,7 +390,7 @@ void EsDashPlayerController::UpdateStreamsBuffer(int32_t) {
 
   bool segments_pending = false;
 
-  for (auto stream : streams_) {
+  for (const auto& stream : streams_) {
     if (stream) {
         segments_pending |= stream->UpdateBuffer(current_playback_time);
     }
@@ -463,7 +469,7 @@ void EsDashPlayerController::OnStreamConfigured(StreamType type) {
   (void)type;  // suppress warning
   LOG_DEBUG("type: %d", static_cast<int32_t>(type));
   bool all_initialized = true;
-  for (auto stream : streams_) {
+  for (const auto& stream : streams_) {
     if (stream && !(stream->IsInitialized())) {
       LOG_DEBUG("some stream is not yet initialized.");
       all_initialized = false;

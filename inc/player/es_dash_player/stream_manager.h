@@ -68,8 +68,7 @@ class ElementaryStreamPacket;
 /// @see class <code>StreamDemuxer</code>
 /// @see class <code>Samsung::NaClPlayer::ElementaryStreamListener</code>
 
-class StreamManager : public Samsung::NaClPlayer::ElementaryStreamListener,
-                      public std::enable_shared_from_this<StreamManager> {
+class StreamManager : public Samsung::NaClPlayer::ElementaryStreamListener {
  public:
   /// Creates a <code>StreamManager</code> object and opens a stream of a given
   /// type in a give player. Newly created object must be initialized using the
@@ -114,7 +113,7 @@ class StreamManager : public Samsung::NaClPlayer::ElementaryStreamListener,
   ///   <code>false</code> otherwise.
   bool Initialize(
       std::unique_ptr<MediaSegmentSequence> segment_sequence,
-      std::shared_ptr<Samsung::NaClPlayer::ESDataSource> es_data_source,
+      Samsung::NaClPlayer::ESDataSource* es_data_source,
       std::function<void(StreamType)> stream_configured_callback,
       std::function<void(StreamDemuxer::Message, std::unique_ptr<
           ElementaryStreamPacket>)> es_packet_callback,
@@ -186,7 +185,7 @@ class StreamManager : public Samsung::NaClPlayer::ElementaryStreamListener,
   void OnSeekData(Samsung::NaClPlayer::TimeTicks new_position) override;
 
   class Impl;
-  std::shared_ptr<Impl> pimpl_;
+  std::unique_ptr<Impl> pimpl_;
 };
 
 #endif  // NATIVE_PLAYER_SRC_PLAYER_ES_DASH_PLAYER_STREAM_MANAGER_H_

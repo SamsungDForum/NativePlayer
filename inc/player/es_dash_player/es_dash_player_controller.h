@@ -233,7 +233,7 @@ class EsDashPlayerController : public PlayerController,
 
   PacketsManager packets_manager_;
   std::unique_ptr<DashManifest> dash_parser_;
-  std::array<std::shared_ptr<StreamManager>,
+  std::array<std::unique_ptr<StreamManager>,
              static_cast<int32_t>(StreamType::MaxStreamTypes)> streams_;
   std::vector<VideoStream> video_representations_;
   std::vector<AudioStream> audio_representations_;
