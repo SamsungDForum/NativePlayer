@@ -49,6 +49,8 @@ static const uint32_t kAnalyzeDuration = 10 * kMicrosecondsPerSecond;
 static const uint32_t kAudioStreamProbeSize = 512;
 static const uint32_t kVideoStreamProbeSize = 128 * 1024;
 
+static const double kSegmentEps = 0.5;
+
 static int s_demux_id = 0;
 
 static TimeTicks ToTimeTicks(int64_t time_ticks, AVRational time_base) {
@@ -627,7 +629,7 @@ unique_ptr<ElementaryStreamPacket> FFMpegDemuxer::MakeESPacketFromAVPacket(
 
   auto pts = ToTimeTicks(pkt->pts, s->time_base);
   auto dts = ToTimeTicks(pkt->dts, s->time_base);
-  if (!has_packets_ && pts + kEps >= timestamp_) {
+  if (!has_packets_ && pts + kSegmentEps >= timestamp_) {
       LOG_DEBUG("Got properly timestamped packet. Zero timestamp variable");
       timestamp_ = 0;
   }
