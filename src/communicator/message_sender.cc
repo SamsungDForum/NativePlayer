@@ -30,6 +30,7 @@ void MessageSender::SetMediaDuration(TimeTicks duration) {
 }
 
 void MessageSender::CurrentTimeUpdate(TimeTicks time) {
+  LOG_DEBUG("Current clip time: %f", time);
   VarDictionary message;
   message.Set(kKeyMessageFromPlayer, MessageFromPlayer::kTimeUpdate);
   message.Set(kKeyTime, time);

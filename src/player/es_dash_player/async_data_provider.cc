@@ -9,6 +9,9 @@
 #include "async_data_provider.h"
 
 #include <cmath>
+#include <chrono>
+#include <string>
+
 #include "libdash/libdash.h"
 
 #include "common.h"
@@ -123,8 +126,13 @@ bool AsyncDataProvider::GetInitSegment(std::vector<uint8_t>* buffer) {
 void AsyncDataProvider::DownloadNextSegmentOnOwnThread(
     int32_t, MediaSegmentSequence::Iterator segment_iterator,
     MessageLoop destination_message_loop) {
+  using std::chrono::steady_clock;
+  using std::chrono::duration_cast;
+  using std::chrono::duration;
+
   auto segment_duration = sequence_->SegmentDuration(segment_iterator);
   auto segment_timestamp = sequence_->SegmentTimestamp(segment_iterator);
+  auto st = steady_clock::now();
   LOG_DEBUG("Starting download for a segment: %f [s] ... %f [s]",
       segment_timestamp, segment_timestamp + segment_duration);
   auto seg = MakeUnique<MediaSegment>();
@@ -134,17 +142,31 @@ void AsyncDataProvider::DownloadNextSegmentOnOwnThread(
   seg->duration_ = segment_duration;
   seg->timestamp_ = segment_timestamp;
 
-  if (!DownloadSegment(*segment_iterator, &(seg->data_))) {
+  auto segment = *segment_iterator;
+  dash::network::IChunk* chunk =
+      static_cast<dash::network::IChunk*>(segment.get());
+  std::string url = chunk->AbsoluteURI();
+  if (chunk->HasByteRange())
+    url += " Range: " + chunk->Range();
+  if (!DownloadSegment(std::move(segment), &(seg->data_))) {
     LOG_DEBUG("Download of a segment: %f [s] ... %f [s] was interrupted.",
         segment_timestamp, segment_timestamp + segment_duration);
     return;
   }
   last_segment_size_ = seg->data_.size();
 
+  size_t seg_data_size = seg->data_.size();
   destination_message_loop.PostWork(cc_factory_.NewCallback(
       &AsyncDataProvider::PassResultOnCallerThread, seg.release()));
+
+  auto et = steady_clock::now();
+  duration<double> d = et - st;
   LOG_DEBUG("Finished download of a segment: %f [s] ... %f [s]",
       segment_timestamp, segment_timestamp + segment_duration);
+
+  LOG_DEBUG("download time: %.4f segment duration: %.4f data size: %u url: %s",
+        d.count(), segment_duration, seg_data_size,
+        url.c_str());
 }
 
 void AsyncDataProvider::PassResultOnCallerThread(int32_t,
