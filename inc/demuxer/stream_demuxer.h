@@ -58,6 +58,8 @@ struct AudioConfig {
   /// stream. Usually it's in header of the file.
   std::vector<uint8_t> extra_data;
 
+  int demux_id;
+
   /// Checks if compared object <code>config</code> is equal to this
   /// <code>AudioConfig</code>.
   /// @return True if objects are equal.\n False otherwise.
@@ -103,6 +105,8 @@ struct VideoConfig {
   /// Describes video extra data. Some codecs need more data to encode
   /// stream. Usually it's in header of the file.
   std::vector<uint8_t> extra_data;
+
+  int demux_id;
 
   /// Checks if compared object <code>config</code> is equal to this
   /// <code>VideoConfig</code>.

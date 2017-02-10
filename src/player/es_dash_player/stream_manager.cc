@@ -419,9 +419,10 @@ void StreamManager::Impl::GotSegment(std::unique_ptr<MediaSegment> segment) {
 }
 
 bool StreamManager::Impl::SetConfig(const AudioConfig& audio_config) {
-  LOG_INFO("OnAudioConfig codec_type: %d!\n"
+  LOG_INFO("OnAudioConfig demux_id: %d codec_type: %d!\n"
       "profile: %d, sample_format: %d,"
       " bits_per_channel: %d, channel_layout: %d, samples_per_second: %d",
+      audio_config.demux_id,
       audio_config.codec_type, audio_config.codec_profile,
       audio_config.sample_format, audio_config.bits_per_channel,
       audio_config.channel_layout, audio_config.samples_per_second);
@@ -459,12 +460,14 @@ bool StreamManager::Impl::SetConfig(const AudioConfig& audio_config) {
 }
 
 bool StreamManager::Impl::SetConfig(const VideoConfig& video_config) {
-  LOG_INFO("OnVideoConfig codec_type: %d!\n"
+  LOG_INFO("OnVideoConfig demux_id: %d codec_type: %d!\n"
       "video configuration - codec: %d, profile: %d, frame: %d "
-      "visible_rect: %d %d ",
+      "visible_rect: %d %d frame_rate: %d / %d", video_config.demux_id,
+      video_config.codec_type,
       video_config.codec_type, video_config.codec_profile,
-      video_config.frame_format, video_config.size.width,
-      video_config.size.height);
+      video_config.frame_format,
+      video_config.size.width, video_config.size.height,
+      video_config.frame_rate.numerator, video_config.frame_rate.denominator);
   if (video_config_ == video_config) {
     LOG_INFO("The same config as before");
     return true;

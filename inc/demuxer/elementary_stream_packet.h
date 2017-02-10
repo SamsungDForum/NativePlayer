@@ -125,6 +125,8 @@ class ElementaryStreamPacket {
   /// stream packet.
   void AddSubsample(uint32_t clear_bytes, uint32_t cipher_bytes);
 
+  int demux_id;
+
  private:
   // assumption: Address returned by vector::data() method is invariant under
   //             move operations

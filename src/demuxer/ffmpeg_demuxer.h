@@ -115,6 +115,8 @@ class FFMpegDemuxer : public StreamDemuxer {
   Samsung::NaClPlayer::TimeTicks timestamp_;
   bool has_packets_;
   InitMode init_mode_;
+
+  int demux_id_;
 };
 
 #endif  // SRC_PLAYER_ES_DASH_PLAYER_DEMUXER_FFMPEG_DEMUXER_H_

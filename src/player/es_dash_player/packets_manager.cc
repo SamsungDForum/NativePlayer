@@ -30,6 +30,11 @@ class BufferedPacket : public PacketsManager::BufferedStreamObject {
         packet_(std::move(packet)) {}
   ~BufferedPacket() override = default;
   bool Append(StreamManager* stream_manager) override {
+    LOG_DEBUG("demux_id: %d manager: %p dts: %f pts: %f dur: %f pts_end: %f"
+        " key_frame: %d encrypted: %d size: %u",
+        packet_->demux_id, stream_manager, packet_->GetDts(), packet_->GetPts(),
+        packet_->GetDuration(), packet_->GetPts() + packet_->GetDuration(),
+        packet_->IsKeyFrame(), packet_->IsEncrypted(), packet_->GetDataSize());
     return !stream_manager->AppendPacket(std::move(packet_));
   }
   bool IsKeyFrame() const override {
@@ -51,6 +56,7 @@ class BufferedConfig : public PacketsManager::BufferedStreamObject {
         config_(config) {}
   ~BufferedConfig() override = default;
   bool Append(StreamManager* stream_manager) override {
+    LOG_DEBUG("demux_id: %d dts: %f CONFIG", config_.demux_id, time());
     return stream_manager->SetConfig(config_);
   }
   bool IsKeyFrame() const override {
@@ -128,8 +134,17 @@ void PacketsManager::OnEsPacket(
                 type == StreamType::Video ? "VIDEO" : "AUDIO");
       break;
     }
-    if (streams_[stream_index]->IsSeeking())
+    if (streams_[stream_index]->IsSeeking()) {
+      LOG_DEBUG("Stream %s is seeking dropping packet with pts: %f",
+                type == StreamType::Video ? "VIDEO" : "AUDIO",
+                packet->GetPts());
       break;
+    }
+
+    LOG_DEBUG("Stream %s demux_id: %d got packet pts: %f dts: %f",
+             type == StreamType::Video ? "VIDEO" : "AUDIO",
+             packet->demux_id, packet->GetPts(), packet->GetDts());
+
     pp::AutoLock critical_section(packets_lock_);
     buffered_packets_timestamp_[stream_index] = packet->GetDts();
     packets_.emplace(MakeUnique<BufferedPacket>(type, std::move(packet)));

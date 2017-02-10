@@ -49,6 +49,8 @@ static const uint32_t kAnalyzeDuration = 10 * kMicrosecondsPerSecond;
 static const uint32_t kAudioStreamProbeSize = 512;
 static const uint32_t kVideoStreamProbeSize = 128 * 1024;
 
+static int s_demux_id = 0;
+
 static TimeTicks ToTimeTicks(int64_t time_ticks, AVRational time_base) {
   int64_t us = av_rescale_q(time_ticks, time_base, kMicrosBase);
   return us * kOneMicrosecond;
@@ -103,8 +105,11 @@ FFMpegDemuxer::FFMpegDemuxer(const pp::InstanceHandle& instance,
       probe_size_(probe_size),
       timestamp_(0.0),
       has_packets_(false),
-      init_mode_(init_mode) {
+      init_mode_(init_mode),
+      demux_id_(++s_demux_id) {
   LOG_DEBUG("parser: %p", this);
+  audio_config_.demux_id = demux_id_;
+  video_config_.demux_id = demux_id_;
 }
 
 FFMpegDemuxer::~FFMpegDemuxer() {
@@ -613,6 +618,7 @@ void FFMpegDemuxer::DrmInitCallbackInDispatcherThread(int32_t,
 unique_ptr<ElementaryStreamPacket> FFMpegDemuxer::MakeESPacketFromAVPacket(
     AVPacket* pkt) {
   auto es_packet = MakeUnique<ElementaryStreamPacket>(pkt->data, pkt->size);
+  es_packet->demux_id = demux_id_;
 
   AVStream* s = format_context_->streams[pkt->stream_index];
 
