@@ -43,6 +43,7 @@ const char* kPlayreadSchemeIdUri =
     "urn:uuid:9a04f079-9840-4286-ab92-e65be0885f95";
 const char* kSchemeIdUriAttribute = "schemeIdUri";
 const char* kCencPsshAttribute = "cenc:pssh";
+const char* kMsprProAttribute = "mspr:pro";
 
 DrmPlayReadyListener::DrmPlayReadyListener(
     const pp::InstanceHandle& instance,
@@ -154,7 +155,9 @@ DrmPlayReadyContentProtectionVisitor::Visit(const vector<IDescriptor*>& cp) {
 
     if (desc->scheme_id_uri_ == kPlayreadSchemeIdUri) {
       for (auto n : mpd_desc->GetAdditionalSubNodes()) {
-        if (n->GetName() == kCencPsshAttribute) {
+        if (n->GetName() == kCencPsshAttribute ||
+            (n->GetName() == kMsprProAttribute &&
+             desc->init_data_type_ != kCencPsshAttribute)) {
           desc->init_data_type_ = n->GetName();
           desc->init_data_ = Base64Decode(n->GetText());
         }
