@@ -18,6 +18,8 @@
 #include <string>
 #include <libgen.h>
 
+#include <chrono>
+
 #include "ppapi/cpp/instance.h"
 #include "ppapi/cpp/var.h"
 
@@ -32,6 +34,17 @@ LogLevel Logger::std_log_level_ = LogLevel::kNone;
 namespace {
 
 const unsigned kMaxMessageSize = 256;
+
+double GetTimestamp() {
+  using std::chrono::steady_clock;
+  using std::chrono::duration_cast;
+  using std::chrono::duration;
+
+  static auto st_begin = steady_clock::now();
+  auto now = steady_clock::now();
+
+  return duration<double>{now - st_begin}.count();
+}
 
 const std::array<std::string, 4> kLogPrefixes = {{
   "",         // LogLevel::kNone
@@ -129,9 +142,12 @@ void Logger::InternalPrint(LogLevel level, const char* std_prefix,
         kLogPrefixes[static_cast<int>(level)] + message + "\n");
   if (level > std_log_level_)
     return;
-  printf("%s%s%s%s\033[0m\n", kLogLevelColors[static_cast<int>(level)].c_str(),
+  printf("%s %11.6f %s%s%s\033[0m\n",
+         kLogLevelColors[static_cast<int>(level)].c_str(),
+         GetTimestamp(),
          std_prefix ? std_prefix : "",
-         kLogPrefixes[static_cast<int>(level)].c_str(), message);
+         kLogPrefixes[static_cast<int>(level)].c_str(),
+         message);
   fflush(stdout);
 }
 
