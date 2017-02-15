@@ -213,7 +213,11 @@ void UrlPlayerController::OnChangeSubVisibility(int32_t, bool show) {
 
 void UrlPlayerController::CleanPlayer() {
   LOG_INFO("Cleaning player.");
-  if (player_) return;
+  if (!player_) return;
+  player_->SetMediaEventsListener(nullptr);
+  player_->SetSubtitleListener(nullptr);
+  player_->SetBufferingListener(nullptr);
+  player_->SetDRMListener(nullptr);
   data_source_.reset();
   state_ = PlayerState::kUnitialized;
 }

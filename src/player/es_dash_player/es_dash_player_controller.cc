@@ -271,6 +271,10 @@ void EsDashPlayerController::Pause() {
 void EsDashPlayerController::CleanPlayer() {
   LOG_INFO("Cleaning player.");
   if (!player_) return;
+  player_->SetMediaEventsListener(nullptr);
+  player_->SetSubtitleListener(nullptr);
+  player_->SetBufferingListener(nullptr);
+  player_->SetDRMListener(nullptr);
   player_thread_.reset();
   data_source_.reset();
   dash_parser_.reset();
