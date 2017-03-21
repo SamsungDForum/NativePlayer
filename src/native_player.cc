@@ -19,8 +19,13 @@
 
 #include "native_player.h"
 
-#include "nacl_io/nacl_io.h"
-#include "ppapi/cpp/var_dictionary.h"
+#include <nacl_io/nacl_io.h>
+#include <ppapi/c/pp_macros.h>
+#include <ppapi/cpp/var_dictionary.h>
+
+#if (PPAPI_RELEASE >= 47)
+#include <ppapi/cpp/text_input_controller.h>
+#endif
 
 #include "communicator/messages.h"
 #include "logger.h"
@@ -64,8 +69,11 @@ bool NativePlayer::Init(uint32_t argc, const char** argn, const char** argv) {
       Logger::SetStdLogLevel(LogLevel::kDebug);
   }
 
+#if (PPAPI_RELEASE >= 47)
   // Prevents showing on-screen keyboard in Tizen 3.0
-  text_input_controller_.SetTextInputType(PP_TEXTINPUT_TYPE_NONE);
+  pp::TextInputController text_input_controller(this);
+  text_input_controller.SetTextInputType(PP_TEXTINPUT_TYPE_NONE);
+#endif
 
   std::shared_ptr<Communication::MessageSender> ui_message_sender =
       std::make_shared<Communication::MessageSender>(this);

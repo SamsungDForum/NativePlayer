@@ -1,4 +1,4 @@
-addPrivileges=http\://tizen.org/privilege/internet
+addPrivileges=http\://tizen.org/privilege/tv.inputdevice,http\://tizen.org/privilege/internet,http\://developer.samsung.com/privilege/drmplay
 customPepperPath=false
 eclipse.preferences.version=1
 pepperVersion=pepper_42

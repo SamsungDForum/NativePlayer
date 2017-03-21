@@ -23,6 +23,7 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavutil/dict.h>
+#include <ppapi/c/pp_macros.h>
 }
 
 #include "common.h"
@@ -233,8 +234,10 @@ Samsung::NaClPlayer::VideoCodec_Type ConvertVideoCodec(AVCodecID codec) {
       return Samsung::NaClPlayer::VIDEOCODEC_TYPE_H263;
     case AV_CODEC_ID_INDEO3:
       return Samsung::NaClPlayer::VIDEOCODEC_TYPE_INDEO3;
+#if (PPAPI_RELEASE >= 47)
     case AV_CODEC_ID_H265:
       return Samsung::NaClPlayer::VIDEOCODEC_TYPE_H265;
+#endif
     default:
       LOG_ERROR("unknown codec %d", codec);
       return Samsung::NaClPlayer::VIDEOCODEC_TYPE_UNKNOWN;

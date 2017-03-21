@@ -26,7 +26,6 @@
 #include "ppapi/c/pp_rect.h"
 #include "ppapi/cpp/instance.h"
 #include "ppapi/cpp/module.h"
-#include "ppapi/cpp/text_input_controller.h"
 #include "ppapi/cpp/var_dictionary.h"
 #include "ppapi/utility/completion_callback_factory.h"
 #include "ppapi/utility/threading/simple_thread.h"
@@ -47,8 +46,7 @@ class NativePlayer : public pp::Instance {
   explicit NativePlayer(PP_Instance instance)
       : pp::Instance(instance),
         player_thread_(this),
-        cc_factory_(this),
-        text_input_controller_(this) {}
+        cc_factory_(this) {}
 
   /// ~NativePlayer()
   /// @private This method don't have to be included in Doxygen documentation
@@ -82,7 +80,6 @@ class NativePlayer : public pp::Instance {
   pp::SimpleThread player_thread_;
   pp::CompletionCallbackFactory<NativePlayer> cc_factory_;
   pp::Rect rect_;
-  pp::TextInputController text_input_controller_;
 };
 
 /// NativePlayerModule creation
