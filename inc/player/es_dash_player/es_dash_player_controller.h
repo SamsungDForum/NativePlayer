@@ -133,11 +133,11 @@ class EsDashPlayerController : public PlayerController,
   ///
   /// @see EsDashPlayerController::EsDashPlayerController()
   /// @see MessageSender::ShowSubtitles()
-  void InitPlayer(const std::string& url, const std::string& subtitle = {},
-                  const std::string& encoding = {},
-                  const std::string& drm_license_url = {},
+  void InitPlayer(const std::string& url, const std::string& subtitle,
+                  const std::string& encoding,
+                  const std::string& drm_license_url,
                   const std::unordered_map<std::string, std::string>&
-                          drm_key_request_properties = {});
+                          drm_key_request_properties);
 
   // Overloaded methods defined by PlayerController, don't have to be commented
   void Play() override;

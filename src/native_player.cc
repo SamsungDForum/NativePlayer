@@ -19,6 +19,8 @@
 
 #include "native_player.h"
 
+#include <cstring>
+
 #include <nacl_io/nacl_io.h>
 #include <ppapi/c/pp_macros.h>
 #include <ppapi/cpp/var_dictionary.h>

@@ -20,6 +20,7 @@
 #ifndef NATIVE_PLAYER_SRC_PLAYER_ES_DASH_PLAYER_DRM_PLAY_READY_H_
 #define NATIVE_PLAYER_SRC_PLAYER_ES_DASH_PLAYER_DRM_PLAY_READY_H_
 
+#include <atomic>
 #include <memory>
 #include <string>
 #include <unordered_map>

@@ -403,10 +403,12 @@ bool FFMpegDemuxer::InitStreamInfo() {
     LOG_DEBUG("opening context = %p", format_context_);
     ret = avformat_open_input(&format_context_, NULL, NULL, NULL);
     if (ret < 0) {
-      LOG_DEBUG(
+      char errbuff[kErrorBufferSize];
+      av_strerror(ret, errbuff, kErrorBufferSize);
+      LOG_ERROR(
           "failed to open context"
           " ret %d %s",
-          ret, av_err2str(ret));
+          ret, errbuff);
       return false;
     }
 
@@ -422,7 +424,7 @@ bool FFMpegDemuxer::InitStreamInfo() {
     if (ret < 0) {
       LOG_ERROR("ERROR - find stream info error, ret: %d", ret);
     }
-    av_dump_format(format_context_, NULL, NULL, NULL);
+    av_dump_format(format_context_, 0, NULL, 0);
   }
   UpdateContentProtectionConfig();
 
