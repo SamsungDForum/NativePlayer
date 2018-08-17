@@ -15,7 +15,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactExtension="nmf" artifactName="${ProjName}" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="python $(NACL_SDK_ROOT)/tools/oshelpers.py rm" description="" id="org.tizen.web.tv.sec.nacl.builder.toolchain.debug.2074020510" name="Debug" parent="org.tizen.web.tv.sec.nacl.builder.toolchain.debug">
+				<configuration artifactExtension="nmf" artifactName="${ProjName}" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="python $(NACL_SDK_ROOT)/tools/oshelpers.py rm -f" description="" id="org.tizen.web.tv.sec.nacl.builder.toolchain.debug.2074020510" name="Debug" parent="org.tizen.web.tv.sec.nacl.builder.toolchain.debug">
 					<folderInfo id="org.tizen.web.tv.sec.nacl.builder.toolchain.debug.2074020510." name="/" resourcePath="">
 						<toolChain id="org.tizen.web.tv.sec.nacl.builder.toolchain.debug.toolchain.558733712" name="NaCl toolchain" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.debug.toolchain">
 							<targetPlatform id="org.tizen.web.tv.sec.nacl.builder.toolchain.debug.2074020510..1812103704" name=""/>
@@ -108,7 +108,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactExtension="nmf" artifactName="${ProjName}" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release" cleanCommand="python $(NACL_SDK_ROOT)/tools/oshelpers.py rm" description="" id="org.tizen.web.tv.sec.nacl.builder.toolchain.release.977798126" name="Release" parent="org.tizen.web.tv.sec.nacl.builder.toolchain.release">
+				<configuration artifactExtension="nmf" artifactName="${ProjName}" buildProperties="org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release" cleanCommand="python $(NACL_SDK_ROOT)/tools/oshelpers.py rm -f" description="" id="org.tizen.web.tv.sec.nacl.builder.toolchain.release.977798126" name="Release" parent="org.tizen.web.tv.sec.nacl.builder.toolchain.release">
 					<folderInfo id="org.tizen.web.tv.sec.nacl.builder.toolchain.release.977798126." name="/" resourcePath="">
 						<toolChain id="org.tizen.web.tv.sec.nacl.builder.toolchain.release.toolchain.2124547203" name="NaCl toolchain" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.release.toolchain">
 							<targetPlatform id="org.tizen.web.tv.sec.nacl.builder.toolchain.release.977798126..41548958" name=""/>
