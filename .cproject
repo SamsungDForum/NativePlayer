@@ -37,7 +37,7 @@
 								<inputType id="org.tizen.web.tv.sec.nacl.builder.toolchain.compiler.cpp.input.188712488" name="C++ input type" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.compiler.cpp.input"/>
 							</tool>
 							<tool id="org.tizen.web.tv.sec.nacl.builder.toolchain.debug.toolchain.linker.c.1532635749" name="NaCl C linker" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.debug.toolchain.linker.c">
-								<option id="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.libs.956091486" name="Libraries (-l)" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.libs" valueType="stringList">
+								<option id="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.c.libs.956091486" name="Libraries (-l)" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.c.libs" valueType="stringList">
 									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="avformat"/>
 									<listOptionValue builtIn="false" value="avcodec"/>
@@ -63,7 +63,7 @@
 									<listOptionValue builtIn="false" value="${NACL_SDK_ROOT}/lib/pnacl/${ConfigName}"/>
 									<listOptionValue builtIn="false" value="${workspace_loc:/${ProjName}/third_party/lib}"/>
 								</option>
-								<option id="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.libs.502513297" name="Libraries (-l)" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.libs" valueType="stringList">
+								<option id="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.cpp.libs.502513297" name="Libraries (-l)" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.cpp.libs" valueType="stringList">
 									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="avformat"/>
 									<listOptionValue builtIn="false" value="avcodec"/>
@@ -128,7 +128,7 @@
 								<inputType id="org.tizen.web.tv.sec.nacl.builder.toolchain.compiler.cpp.input.440632019" name="C++ input type" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.compiler.cpp.input"/>
 							</tool>
 							<tool id="org.tizen.web.tv.sec.nacl.builder.toolchain.debug.toolchain.linker.c.1532635749" name="NaCl C linker" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.debug.toolchain.linker.c">
-								<option id="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.libs.424516838" name="Libraries (-l)" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.libs" valueType="stringList">
+								<option id="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.c.libs.424516838" name="Libraries (-l)" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.c.libs" valueType="stringList">
 									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="avformat"/>
 									<listOptionValue builtIn="false" value="avcodec"/>
@@ -152,7 +152,7 @@
 							<tool id="org.tizen.web.tv.sec.nacl.builder.toolchain.release.toolchain.translator.677589399" name="NaCl Translator" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.release.toolchain.translator"/>
 							<tool id="org.tizen.web.tv.sec.nacl.builder.toolchain.release.toolchain.manifest.519739140" name="NaCl manifest generator" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.release.toolchain.manifest"/>
 							<tool id="org.tizen.web.tv.sec.nacl.builder.toolchain.release.toolchain.linker.cpp.2124488394" name="NaCl C++ linker" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.release.toolchain.linker.cpp">
-								<option id="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.libs.701011763" name="Libraries (-l)" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.libs" valueType="stringList">
+								<option id="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.cpp.libs.701011763" name="Libraries (-l)" superClass="org.tizen.web.tv.sec.nacl.builder.toolchain.linker.cpp.libs" valueType="stringList">
 									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="avformat"/>
 									<listOptionValue builtIn="false" value="avcodec"/>
